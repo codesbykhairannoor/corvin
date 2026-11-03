@@ -40,7 +40,7 @@ try:
     from corvin.integrations.langchain import CorvinCallbackHandler
     import ravens  # Legacy alias check
 
-    assert __version__ == "0.7.2", f"Version mismatch: {__version__}"
+    assert __version__ == "0.7.3", f"Version mismatch: {__version__}"
     assert ravens.RavenGuard is CorvinGuard, "RavenGuard alias mismatch"
     assert ravens.RavenStrikeException is CorvinStrikeException, "RavenStrikeException alias mismatch"
     print("   ✓ All core classes, policies, and framework integrations imported cleanly.")
