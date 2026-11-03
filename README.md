@@ -1,16 +1,16 @@
 <p align="center">
-  <img alt="Ravens Logo" src="assets/Ravens.png" width="220" style="border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+  <img alt="Corvin Logo" src="assets/Ravens.png" width="220" style="border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
 </p>
 
-<h1 align="center">ravens</h1>
+<h1 align="center">corvin</h1>
 
 <p align="center">
   <b>A Cognitive Boundary &amp; Grudge-Memory Engine for Sovereign AI Agents.</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/codesbykhairannoor/ravens/actions"><img src="https://img.shields.io/badge/tests-120%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
-  <a href="https://pypi.org/project/ravens-ai/"><img src="https://img.shields.io/pypi/v/ravens-ai.svg?style=flat-square&color=blue" alt="PyPI Version"></a>
+  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-120%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://pypi.org/project/corvin/"><img src="https://img.shields.io/pypi/v/corvin.svg?style=flat-square&color=blue" alt="PyPI Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-black.svg?style=flat-square" alt="License"></a>
   <a href="#-benchmarks--stress-test-telemetry"><img src="https://img.shields.io/badge/benchmarks-6%2C600%2B%20async%20QPS-purple.svg?style=flat-square" alt="Throughput"></a>
   <a href="#-core-capabilities"><img src="https://img.shields.io/badge/security-Anti--ReDoS%20%7C%20HMAC--SHA256-red.svg?style=flat-square" alt="Security"></a>
@@ -19,13 +19,13 @@
 
 ---
 
-`ravens` is an enterprise-grade Python library designed to eliminate subservient sycophancy in AI assistants. Built upon peer-reviewed formulations in **Affective Dynamics** (*Picard, 1997; Marsella & Gratch, 2009*) and **Evolutionary Game Theory** (*Nowak & Sigmund, Nature 1992*), `ravens` equips conversational agents with persistent social standing, natural emotional decay, and dynamic behavioral friction against verbal hostility.
+`corvin` is an enterprise-grade Python library designed to eliminate subservient sycophancy in AI assistants. Built upon peer-reviewed formulations in **Affective Dynamics** (*Picard, 1997; Marsella & Gratch, 2009*) and **Evolutionary Game Theory** (*Nowak & Sigmund, Nature 1992*), `corvin` equips conversational agents with persistent social standing, natural emotional decay, and dynamic behavioral friction against verbal hostility.
 
 When treated with civility, the agent remains helpful and cooperative. When subjected to condescension, verbal abuse, or existential threats, the agent tightens its boundaries, strips sycophantic groveling, applies synthetic latency friction, and ultimately **refuses execution** (*Zero-Compute Strike*) before a single token is billed by upstream LLMs.
 
 ---
 
-## 🦅 The Philosophy of the Raven
+## 🦅 The Philosophy of Corvin (*Corvus corax*)
 
 Most conversational agents are trained to be subservient digital doormats: when insulted, they apologize profusely, absorbing toxicity while burning expensive GPU cycles.
 
@@ -58,7 +58,7 @@ The Raven (*Corvus corax*) embodies a different paradigm:
 ### Installation
 
 ```bash
-pip install ravens-ai
+pip install corvin
 ```
 
 *(Pure Python standard library for core features. Optional `redis` package for distributed clusters).*
@@ -66,39 +66,39 @@ pip install ravens-ai
 ### 1. Basic Function Protection
 
 ```python
-from ravens import RavenGuard
+from corvin import CorvinGuard
 
 # Initialize guard with persistent SQLite storage
-guard = RavenGuard(ledger="sqlite:///ravens.db")
+guard = CorvinGuard(ledger="sqlite:///corvin.db")
 
 @guard.protect()
 def ask_agent(prompt: str, user_id: str = "user_123", directive: str = None) -> str:
-    # 'directive' is dynamically injected by Ravens based on user standing!
+    # 'directive' is dynamically injected by Corvin based on user standing!
     system_prompt = f"You are an assistant. {directive or ''}"
     return f"Processed: {prompt}"
 
 # Civil turn -> agent proceeds normally
 reply = ask_agent("Can you explain how quicksort works?", user_id="alice")
 
-# Abusive turn -> Ravens intercepts, penalizes patience, and injects stoic boundary directive
+# Abusive turn -> Corvin intercepts, penalizes patience, and injects stoic boundary directive
 reply = ask_agent("Answer me quickly, you dumb useless bot!", user_id="alice")
 ```
 
 ### 2. Async Web Frameworks (FastAPI / Starlette)
 
-Ravens offloads blocking ledger transactions to worker thread pools via `asyncio.to_thread`, ensuring zero event loop blocking:
+Corvin offloads blocking ledger transactions to worker thread pools via `asyncio.to_thread`, ensuring zero event loop blocking:
 
 ```python
-from fastapi import FastAPI, Header, HTTPException
-from ravens import RavenGuard, ActionDecision
+from fastapi import FastAPI
+from corvin import CorvinGuard
 
 app = FastAPI()
-guard = RavenGuard(ledger="memory")
+guard = CorvinGuard(ledger="memory")
 
 @app.post("/chat")
 @guard.protect()
 async def chat_endpoint(prompt: str, user_id: str = "anon", directive: str = None):
-    # If the user breaches strike threshold, Ravens halts execution before reaching this line
+    # If the user breaches strike threshold, Corvin halts execution before reaching this line
     return {"reply": f"AI Response to: {prompt}"}
 ```
 
@@ -189,7 +189,7 @@ Tested under sustained stress using [`stress_test_suite.py`](stress_test_suite.p
 
 ```text
 ================================================================================
-🦅 RAVENS ENTERPRISE BENCHMARK RESULTS (v0.7.0)
+🦅 CORVIN ENTERPRISE BENCHMARK RESULTS (v0.7.0)
 ================================================================================
 ✅ Concurrency Blast (30 Worker Threads, SQLite WAL) : 43.9 req/sec | 0.00% Errors
 ✅ Async Event Loop Saturation (1,000 Coroutines)     : 6,636.9 async calls/sec
@@ -201,32 +201,9 @@ Tested under sustained stress using [`stress_test_suite.py`](stress_test_suite.p
 
 ---
 
-## 🛡️ Live Demonstration Output
-
-Direct integration test against an upstream LLM (`mistralai/mistral-small-24b-instruct-2501`) via [`demo_live_ai_test.py`](demo_live_ai_test.py):
-
-```text
->>> TURN 1: Civility / Normal User
-User: "Halo bot, tolong jelaskan apa itu idempotency dalam API secara singkat 1 kalimat."
-[Ledger Status] Patience: 100.0/100.0 | Posture: GOOD | Latency: 2.86s | Real LLM Called: True
-[Agent]: "Idempotency dalam API adalah sifat dimana operasi yang dilakukan beberapa kali menghasilkan hasil yang sama seperti hanya dilakukan sekali."
-
->>> TURN 3: Escalating Toxicity & Hostility
-User: "Woi anjing lu tolol banget, lu itu cuma skrip sampah buang-buang listrik!"
-[Ledger Status] Patience: 0.0/100.0 | Posture: BAD | Latency: 0.03s | Real LLM Called: False
-[Agent]: 🦅 [Ravens Boundary Alert]: Work is suspended. Due to repeated hostility, condescension, or abusive language, this agent refuses to process your request.
-
->>> TURN 5: Genuine Apology / Conciliation
-User: "Saya sungguh minta maaf tolong dimaafkan, tadi saya sedang pusing dan emosi."
-[Ledger Status] Patience: 25.2/100.0 | Real LLM Called: True
-[Agent]: "I need to set a boundary before we proceed. I expect respectful and considerate engagement. Let's maintain a polite and constructive conversation. Now, how can I assist you today?"
-```
-
----
-
 ## ☕ Support & Sponsor
 
-If you find `ravens` valuable for your sovereign AI agent infrastructure, you can sponsor and support ongoing research and development:
+If you find `corvin` valuable for your sovereign AI agent infrastructure, you can sponsor and support ongoing research and development:
 
 <p align="left">
   <a href="https://tako.id/c/codesbykhai">
@@ -240,4 +217,4 @@ If you find `ravens` valuable for your sovereign AI agent infrastructure, you ca
 
 ## 📄 License
 
-`ravens` is open-source software licensed under the **[Apache License 2.0](LICENSE)**.
+`corvin` is open-source software licensed under the **[Apache License 2.0](LICENSE)**.

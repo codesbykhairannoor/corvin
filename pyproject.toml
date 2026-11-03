@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ravens-ai"
+name = "corvin"
 version = "0.7.0"
 description = "A Cognitive Boundary & Grudge-Memory Engine for Sovereign AI Agents."
 readme = "README.md"
@@ -20,10 +20,12 @@ keywords = [
     "game-theory",
     "safety",
     "boundary-defense",
-    "sovereign-ai"
+    "sovereign-ai",
+    "corvin",
+    "ravens"
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -35,10 +37,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/codesbykhairannoor/ravens"
-Documentation = "https://github.com/codesbykhairannoor/ravens#readme"
-Repository = "https://github.com/codesbykhairannoor/ravens.git"
-Issues = "https://github.com/codesbykhairannoor/ravens/issues"
+Homepage = "https://github.com/codesbykhairannoor/corvin"
+Documentation = "https://github.com/codesbykhairannoor/corvin#readme"
+Repository = "https://github.com/codesbykhairannoor/corvin.git"
+Issues = "https://github.com/codesbykhairannoor/corvin/issues"
 Funding = "https://tako.id/c/codesbykhai"
 
 [project.optional-dependencies]
@@ -47,7 +49,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ravens"]
+packages = ["src/corvin", "src/ravens"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -60,4 +62,3 @@ include = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-

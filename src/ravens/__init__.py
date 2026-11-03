@@ -42,9 +42,19 @@ from .security.signer import (
     InvalidUserSignatureException,
 )
 
+# Corvin Aliases
+CorvinGuard = RavenGuard
+CorvinPolicy = RavenPolicy
+CorvinException = RavenException
+CorvinStrikeException = RavenStrikeException
+
 __version__ = "0.7.0"
 
 __all__ = [
+    "CorvinGuard",
+    "CorvinPolicy",
+    "CorvinException",
+    "CorvinStrikeException",
     "RavenGuard",
     "AgentPosture",
     "get_posture_from_patience",
