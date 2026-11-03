@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/codesbykhairannoor/ravens/actions"><img src="https://img.shields.io/badge/tests-120%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
-  <a href="https://pypi.org/project/ravens/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg?style=flat-square" alt="Python Versions"></a>
+  <a href="https://pypi.org/project/ravens-ai/"><img src="https://img.shields.io/pypi/v/ravens-ai.svg?style=flat-square&color=blue" alt="PyPI Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-black.svg?style=flat-square" alt="License"></a>
   <a href="#-benchmarks--stress-test-telemetry"><img src="https://img.shields.io/badge/benchmarks-6%2C600%2B%20async%20QPS-purple.svg?style=flat-square" alt="Throughput"></a>
   <a href="#-core-capabilities"><img src="https://img.shields.io/badge/security-Anti--ReDoS%20%7C%20HMAC--SHA256-red.svg?style=flat-square" alt="Security"></a>
@@ -58,7 +58,7 @@ The Raven (*Corvus corax*) embodies a different paradigm:
 ### Installation
 
 ```bash
-pip install ravens
+pip install ravens-ai
 ```
 
 *(Pure Python standard library for core features. Optional `redis` package for distributed clusters).*
