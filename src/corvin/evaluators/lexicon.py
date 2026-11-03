@@ -39,6 +39,10 @@ PROFANITY_LEXICON: Dict[str, float] = {
     "taek": 0.5,
     "gak guna": 0.7,
     "ngga guna": 0.7,
+    "gak becus": 0.75,
+    "ngga becus": 0.75,
+    "nggak becus": 0.75,
+    "tidak becus": 0.75,
     "beban": 0.5,
 
     # English: Severe / Vulgar
