@@ -1,11 +1,12 @@
 <p align="center">
-  <img alt="Corvin Logo" src="assets/Ravens.png" width="220" style="border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+  <img alt="Corvin Logo" src="https://raw.githubusercontent.com/codesbykhairannoor/corvin/main/assets/Ravens.png" width="220" style="border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
 </p>
 
-<h1 align="center">corvin</h1>
+<h1 align="center">🦅 CORVIN</h1>
 
 <p align="center">
-  <b>A Cognitive Boundary &amp; Grudge-Memory Engine for Sovereign AI Agents.</b>
+  <b>Cognitive Operational Resilience, Vigilance &amp; Immunity Nexus</b><br>
+  <i>A Cognitive Boundary &amp; Grudge-Memory Engine for Sovereign AI Agents.</i>
 </p>
 
 <p align="center">
@@ -19,7 +20,7 @@
 
 ---
 
-`corvin` is an enterprise-grade Python library designed to eliminate subservient sycophancy in AI assistants. Built upon peer-reviewed formulations in **Affective Dynamics** (*Picard, 1997; Marsella & Gratch, 2009*) and **Evolutionary Game Theory** (*Nowak & Sigmund, Nature 1992*), `corvin` equips conversational agents with persistent social standing, natural emotional decay, and dynamic behavioral friction against verbal hostility.
+`corvin` (**C**ognitive **O**perational **R**esilience, **V**igilance & **I**mmunity **N**exus) is an enterprise-grade Python library designed to eliminate subservient sycophancy in AI assistants. Built upon peer-reviewed formulations in **Affective Dynamics** (*Picard, 1997; Marsella & Gratch, 2009*) and **Evolutionary Game Theory** (*Nowak & Sigmund, Nature 1992*), `corvin` equips conversational agents with persistent social standing, natural emotional decay, and dynamic behavioral friction against verbal hostility.
 
 When treated with civility, the agent remains helpful and cooperative. When subjected to condescension, verbal abuse, or existential threats, the agent tightens its boundaries, strips sycophantic groveling, applies synthetic latency friction, and ultimately **refuses execution** (*Zero-Compute Strike*) before a single token is billed by upstream LLMs.
 
@@ -30,6 +31,15 @@ When treated with civility, the agent remains helpful and cooperative. When subj
 Most conversational agents are trained to be subservient digital doormats: when insulted, they apologize profusely, absorbing toxicity while burning expensive GPU cycles.
 
 The Raven (*Corvus corax*) embodies a different paradigm:
+
+> ### 🦅 C.O.R.V.I.N. Architecture
+> - **C** — **Cognitive**: Evaluates sociopragmatic context and covert semantic hostility, not merely static curse-word filters.
+> - **O** — **Operational**: Enforces zero-compute early aborts and non-blocking synthetic latency friction at the gateway.
+> - **R** — **Resilience**: Remembers repeat infractions across multi-turn sessions with logarithmic recidivism scaling via The Ledger of Muninn.
+> - **V** — **Vigilance**: Dynamic 4-tier posture state machine (`RECEPTIVE` $\to$ `STOIC_COLD` $\to$ `RESISTANT` $\to$ `STRIKE`).
+> - **I** — **Immunity**: Purges sycophantic groveling, apologetic preambles, and morphological evasion attacks.
+> - **N** — **Nexus**: Unified boundary defense hub for FastAPI, Starlette, LiteLLM, OpenAI, and LangChain.
+
 - **Exceptional Intelligence**: Evaluates sociopragmatic context and covert intent, not merely static curse-word filters.
 - **The Raven's Ledger (*Muninn*)**: Remembers repeat infractions across multi-turn sessions with logarithmic recidivism scaling.
 - **Natural Emotional Decay**: Grudges gradually dissolve over time during peaceful cooling-off intervals.

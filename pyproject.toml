@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corvin"
-version = "0.7.1"
-description = "A Cognitive Boundary & Grudge-Memory Engine for Sovereign AI Agents."
+version = "0.7.2"
+description = "CORVIN: Cognitive Operational Resilience, Vigilance & Immunity Nexus for Sovereign AI Agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }

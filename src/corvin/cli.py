@@ -49,7 +49,7 @@ from corvin.morphology.homoglyphs import fold_homoglyphs
 def print_banner():
     banner = f"""{CYAN}{BOLD}
    🦅  C O R V I N  v{__version__}
-   {DIM}Cognitive Boundary & Grudge-Memory Engine for Sovereign AI Agents{RESET}
+   {DIM}Cognitive Operational Resilience, Vigilance & Immunity Nexus{RESET}
 """
     print(banner)
 
