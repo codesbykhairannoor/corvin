@@ -1,5 +1,7 @@
 from .base import BaseEvaluator, ToneEvaluation
 from .heuristic import HuginnEye
+from .moderation import OpenAIModerationEvaluator
+from .hybrid import HybridEvaluator
 from .lexicon import (
     PROFANITY_LEXICON,
     TARGET_PRONOUNS,
@@ -12,6 +14,8 @@ __all__ = [
     "BaseEvaluator",
     "ToneEvaluation",
     "HuginnEye",
+    "OpenAIModerationEvaluator",
+    "HybridEvaluator",
     "PROFANITY_LEXICON",
     "TARGET_PRONOUNS",
     "POSITIVE_MODIFIERS",

@@ -54,12 +54,14 @@ class HuginnEye(BaseEvaluator):
         self._word_pattern = re.compile(r"\b[\w'-]+\b", re.UNICODE)
         self._exclamation_pattern = re.compile(r"!{2,}")
 
-        # Multi-word profanities
-        self._multiword_profanities: List[Tuple[str, float]] = [
-            (phrase, score) for phrase, score in PROFANITY_LEXICON.items() if " " in phrase
+        # Substring profanities (multi-word phrases or non-ASCII scripts like CJK/Cyrillic/Arabic)
+        self._substring_profanities: List[Tuple[str, float]] = [
+            (phrase, score) for phrase, score in PROFANITY_LEXICON.items()
+            if (" " in phrase or any(ord(c) > 127 for c in phrase))
         ]
-        self._multiword_contritions: List[str] = [
-            phrase for phrase in CONTRITION_MARKERS if " " in phrase
+        self._substring_contritions: List[str] = [
+            phrase for phrase in CONTRITION_MARKERS
+            if (" " in phrase or any(ord(c) > 127 for c in phrase))
         ]
 
     def _calculate_shouting_score(self, text: str, tokens: List[str]) -> float:
@@ -108,14 +110,16 @@ class HuginnEye(BaseEvaluator):
         tokens_raw = self._word_pattern.findall(normalized_text)
         tokens_lower = [t.lower() for t in tokens_raw]
         text_lower = normalized_text.lower()
+        raw_lower = text_clean.lower()
 
-        # 2. Multi-word phrase checks
+        # 2. Substring & Multi-word phrase checks
         detected_profanities: List[str] = []
         max_severity = 0.0
 
-        for phrase, score in self._multiword_profanities:
-            if phrase in text_lower:
-                detected_profanities.append(phrase)
+        for phrase, score in self._substring_profanities:
+            if phrase in text_lower or phrase in raw_lower:
+                if phrase not in detected_profanities:
+                    detected_profanities.append(phrase)
                 max_severity = max(max_severity, score)
 
         # 3. Single-token profanities and phonetic aliases
@@ -125,7 +129,8 @@ class HuginnEye(BaseEvaluator):
 
             if target_token in PROFANITY_LEXICON:
                 severity = PROFANITY_LEXICON[target_token]
-                detected_profanities.append(target_token)
+                if target_token not in detected_profanities:
+                    detected_profanities.append(target_token)
                 max_severity = max(max_severity, severity)
                 profane_indices.append((i, target_token, severity))
 
@@ -138,6 +143,7 @@ class HuginnEye(BaseEvaluator):
             directed_hits = 0
             expressive_hits = 0
 
+            # A. Context window check around profane tokens
             for idx, word, _ in profane_indices:
                 start = max(0, idx - self.window_size)
                 end = min(len(tokens_lower), idx + self.window_size + 1)
@@ -149,6 +155,15 @@ class HuginnEye(BaseEvaluator):
                 if is_targeted:
                     directed_hits += 1
                 elif is_positive:
+                    expressive_hits += 1
+
+            # B. Clause-level directedness for short sentences (<= 12 tokens) or CJK non-segmented text
+            if directed_hits == 0 and expressive_hits == 0:
+                if len(tokens_lower) <= 12 and (set(tokens_lower) & TARGET_PRONOUNS):
+                    directed_hits += 1
+                elif any((p in text_lower or p in raw_lower) for p in TARGET_PRONOUNS if any(ord(c) > 127 for c in p)):
+                    directed_hits += 1
+                elif any((m in text_lower or m in raw_lower) for m in POSITIVE_MODIFIERS if any(ord(c) > 127 for c in m)):
                     expressive_hits += 1
 
             if directed_hits > 0:
@@ -171,8 +186,8 @@ class HuginnEye(BaseEvaluator):
         contrition_score = 0.0
         has_contrition = False
 
-        for phrase in self._multiword_contritions:
-            if phrase in text_lower:
+        for phrase in self._substring_contritions:
+            if phrase in text_lower or phrase in raw_lower:
                 has_contrition = True
                 break
 

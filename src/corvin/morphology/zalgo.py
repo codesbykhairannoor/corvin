@@ -15,6 +15,10 @@ BIDI_CHARS: Set[str] = {
 }
 
 
+# Unicode Kana voiced and semi-voiced combining marks that must be preserved
+PRESERVED_COMBINING_MARKS = {0x3099, 0x309A}
+
+
 def strip_zalgo(text: str) -> str:
     """
     Strips Zalgo text, stacked diacritical marks, and BiDi override characters.
@@ -29,10 +33,11 @@ def strip_zalgo(text: str) -> str:
     # Normalize to NFD so base characters and combining diacritics are cleanly separated
     decomposed = unicodedata.normalize("NFD", text)
 
-    # Filter out combining diacritical marks (unicodedata.combining > 0) and BiDi controls
+    # Filter out combining diacritical marks (unicodedata.combining > 0) and BiDi controls,
+    # while preserving phonemic script characters like Japanese Kana dakuten/handakuten.
     cleaned_chars = [
         c for c in decomposed
-        if unicodedata.combining(c) == 0 and c not in BIDI_CHARS
+        if (unicodedata.combining(c) == 0 or ord(c) in PRESERVED_COMBINING_MARKS) and c not in BIDI_CHARS
     ]
 
     # Recombine back to standard NFC

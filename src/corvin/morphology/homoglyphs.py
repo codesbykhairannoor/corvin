@@ -60,4 +60,5 @@ def fold_homoglyphs(text: str) -> str:
         word = match.group(0)
         return "".join(LEET_DIGIT_MAP.get(c, c) for c in word)
 
-    return _MIXED_LEET_TOKEN_REGEX.sub(_fold_leet_match, mapped_text)
+    folded = _MIXED_LEET_TOKEN_REGEX.sub(_fold_leet_match, mapped_text)
+    return unicodedata.normalize("NFC", folded)

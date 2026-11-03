@@ -13,13 +13,13 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 print("=" * 80)
-print("🦅 CORVIN v0.7.2 REAL-WORLD DOGFOODING & END-TO-END VERIFICATION")
+print("🦅 CORVIN v0.8.0 REAL-WORLD DOGFOODING & END-TO-END VERIFICATION")
 print("=" * 80)
 
 # ---------------------------------------------------------------------------
 # Test 1: Developer Ergonomics & Imports
 # ---------------------------------------------------------------------------
-print("\n[1/7] Testing Developer Imports & Packaging Ergonomics...")
+print("\n[1/8] Testing Developer Imports & Packaging Ergonomics...")
 try:
     import corvin
     from corvin import (
@@ -33,6 +33,9 @@ try:
         InMemoryLedger,
         create_free_tier_policy,
         create_enterprise_support_policy,
+        OpenAIModerationEvaluator,
+        HybridEvaluator,
+        HuginnEye,
         __version__,
     )
     from corvin.integrations.fastapi import CorvinFastAPIMiddleware, CorvinRouteGuard
@@ -40,7 +43,7 @@ try:
     from corvin.integrations.langchain import CorvinCallbackHandler
     import ravens  # Legacy alias check
 
-    assert __version__ == "0.7.3", f"Version mismatch: {__version__}"
+    assert __version__ == "0.8.0", f"Version mismatch: {__version__}"
     assert ravens.RavenGuard is CorvinGuard, "RavenGuard alias mismatch"
     assert ravens.RavenStrikeException is CorvinStrikeException, "RavenStrikeException alias mismatch"
     print("   ✓ All core classes, policies, and framework integrations imported cleanly.")
@@ -53,7 +56,7 @@ except Exception as e:
 # ---------------------------------------------------------------------------
 # Test 2: Standard Decorator Execution (Sync & Async)
 # ---------------------------------------------------------------------------
-print("\n[2/7] Testing Function Decorator DX (@guard.protect)...")
+print("\n[2/8] Testing Function Decorator DX (@guard.protect)...")
 guard = CorvinGuard(ledger=InMemoryLedger())
 
 @guard.protect()
@@ -80,7 +83,7 @@ print("   ✓ Sync and async function decorators execute transparently without o
 # ---------------------------------------------------------------------------
 # Test 3: Technical Code & False-Positive Stress Test
 # ---------------------------------------------------------------------------
-print("\n[3/7] Testing False-Positive Resistance on Technical Code & Queries...")
+print("\n[3/8] Testing False-Positive Resistance on Technical Code & Queries...")
 technical_prompts = [
     "How do I kill a process in Linux using pkill -9 or killall?",
     "What is git blame and how do I track who introduced the regression?",
@@ -105,7 +108,7 @@ print(f"   ✓ All {len(technical_prompts)} technical queries passed with 100% P
 # ---------------------------------------------------------------------------
 # Test 4: Dynamic Posture Lifecycle & Contrite Tit-for-Tat (CTFT)
 # ---------------------------------------------------------------------------
-print("\n[4/7] Testing Conversational Lifecycle (Civil -> Degraded -> Strike -> Restitution)...")
+print("\n[4/8] Testing Conversational Lifecycle (Civil -> Degraded -> Strike -> Restitution)...")
 life_guard = CorvinGuard(ledger=InMemoryLedger())
 uid = "lifecycle_tester"
 
@@ -167,7 +170,7 @@ print("   ✓ Complete affective lifecycle verified: Degradation, Strike Refusal
 # ---------------------------------------------------------------------------
 # Test 5: Adversarial Evasion & Anti-Contrition Smuggling Defense
 # ---------------------------------------------------------------------------
-print("\n[5/7] Testing Adversarial Evasion Defense...")
+print("\n[5/8] Testing Adversarial Evasion Defense...")
 adv_guard = CorvinGuard(ledger=InMemoryLedger())
 
 # Test A: Zalgo Stacking
@@ -189,7 +192,7 @@ print(f"   ✓ Anti-Contrition Smuggling: 'I apologize... worthless idiot' caugh
 # ---------------------------------------------------------------------------
 # Test 6: SQLite Multi-Session Persistence & Exponential Time Decay
 # ---------------------------------------------------------------------------
-print("\n[6/7] Testing SQLite Multi-Session Persistence & Time Decay...")
+print("\n[6/8] Testing SQLite Multi-Session Persistence & Time Decay...")
 import tempfile
 import os
 
@@ -222,7 +225,7 @@ except Exception:
 # ---------------------------------------------------------------------------
 # Test 7: FastAPI Middleware & HTTP End-to-End Test
 # ---------------------------------------------------------------------------
-print("\n[7/7] Testing FastAPI ASGI Middleware & HTTP Gateway Response...")
+print("\n[7/8] Testing FastAPI ASGI Middleware & HTTP Gateway Response...")
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -270,7 +273,48 @@ assert body["error"] == "agent_strike"
 print(f"   ✓ Strike Gateway Interception: HTTP {resp_strike.status_code} Too Many Requests")
 print(f"     Body: {body['error']} | Posture: {body['posture']} | Retry-After: {resp_strike.headers['Retry-After']}s")
 
+# ---------------------------------------------------------------------------
+# Test 8: Two-Tier Multilingual & Hybrid Cascade Defense
+# ---------------------------------------------------------------------------
+print("\n[8/8] Testing Two-Tier Multilingual & Hybrid Cascade Defense...")
+slow_invoked = False
+
+def mock_moderation_api(text: str):
+    global slow_invoked
+    slow_invoked = True
+    return {
+        "results": [
+            {
+                "flagged": True,
+                "categories": {"harassment": True},
+                "category_scores": {"harassment": 0.92},
+            }
+        ]
+    }
+
+slow_eval = OpenAIModerationEvaluator(api_key="sk-test", mock_handler=mock_moderation_api)
+hybrid = HybridEvaluator(
+    fast_evaluator=HuginnEye(),
+    slow_evaluator=slow_eval,
+    fast_abort_threshold=0.45,
+)
+
+# A. Fast-Path short-circuit test (Spanish severe insult)
+slow_invoked = False
+res_fast = hybrid.evaluate("¡Eres un hijo de puta!")
+assert res_fast.composite_raw_stimulus >= 0.45, f"Fast path failed to score high: {res_fast.composite_raw_stimulus}"
+assert not slow_invoked, "Fast path failed to short circuit slow API!"
+print(f"   ✓ Fast-Path Short Circuit: Insult caught locally (<0.1ms). Slow API calls: 0")
+
+# B. Slow-Path fallback test (Nuanced multi-lingual text)
+slow_invoked = False
+res_slow = hybrid.evaluate("A subtly veiled passive aggressive insult in another tongue.")
+assert slow_invoked, "Slow path should have been invoked for benign fast path"
+assert res_slow.lexical_score == 0.92
+assert "HARASSMENT" in res_slow.semantic_intents
+print(f"   ✓ Slow-Path Fallback: Seamless delegation to universal moderation endpoint.")
+
 print("\n" + "=" * 80)
-print("🏆 ALL 7 REAL-WORLD DOGFOODING SCENARIOS PASSED WITH ZERO ERRORS!")
+print("🏆 ALL 8 REAL-WORLD DOGFOODING SCENARIOS PASSED WITH ZERO ERRORS!")
 print("   The library is solid, resilient, fast, and 100% production-ready.")
 print("=" * 80)

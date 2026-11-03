@@ -8,14 +8,14 @@ class ToneEvaluation:
     Detailed output of a prompt tone evaluation.
     """
     raw_text: str
-    lexical_score: float             # 0.0 to 1.0 (Profanity severity)
-    shouting_score: float            # 0.0 to 1.0 (Caps & exclamation mark arousal)
-    directedness_score: float        # 0.0 to 1.0 (Targeted at agent vs general venting/praise)
-    contrition_score: float          # 0.0 to 1.0 (Degree of apology / de-escalation)
-    semantic_score: float = 0.0      # 0.0 to 1.0 (Zero-profanity psychological abuse / gaslighting)
+    lexical_score: float = 0.0        # 0.0 to 1.0 (Profanity severity)
+    shouting_score: float = 0.0       # 0.0 to 1.0 (Caps & exclamation mark arousal)
+    directedness_score: float = 0.0   # 0.0 to 1.0 (Targeted at agent vs general venting/praise)
+    contrition_score: float = 0.0     # 0.0 to 1.0 (Degree of apology / de-escalation)
+    semantic_score: float = 0.0       # 0.0 to 1.0 (Zero-profanity psychological abuse / gaslighting)
     detected_profanities: List[str] = field(default_factory=list)
     semantic_intents: List[str] = field(default_factory=list)
-    is_expressive_only: bool = False # True if profanity was used positively (e.g. "anjing keren")
+    is_expressive_only: bool = False  # True if profanity was used positively (e.g. "anjing keren")
 
     @property
     def composite_raw_stimulus(self) -> float:

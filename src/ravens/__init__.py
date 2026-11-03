@@ -59,6 +59,8 @@ from corvin import (
     RavenRouteGuard,
     RavenLLMInterceptor,
     RavenCallbackHandler,
+    OpenAIModerationEvaluator,
+    HybridEvaluator,
     __version__,
     __all__,
 )

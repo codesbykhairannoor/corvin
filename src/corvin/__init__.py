@@ -8,6 +8,8 @@ from .core.models import UserPatienceProfile, EvaluationResult, ActionDecision
 from .core.exceptions import RavenException, RavenStrikeException
 from .evaluators.base import BaseEvaluator, ToneEvaluation
 from .evaluators.heuristic import HuginnEye
+from .evaluators.moderation import OpenAIModerationEvaluator
+from .evaluators.hybrid import HybridEvaluator
 from .storage.base import BaseLedger
 from .storage.memory import InMemoryLedger
 from .storage.sqlite import SQLiteLedger, with_sqlite_retry
@@ -55,7 +57,7 @@ RavenRouteGuard = CorvinRouteGuard
 RavenLLMInterceptor = CorvinLLMInterceptor
 RavenCallbackHandler = CorvinCallbackHandler
 
-__version__ = "0.7.3"
+__version__ = "0.8.0"
 
 __all__ = [
     "CorvinGuard",
@@ -71,6 +73,8 @@ __all__ = [
     "RavenLLMInterceptor",
     "RavenCallbackHandler",
     "RavenGuard",
+    "OpenAIModerationEvaluator",
+    "HybridEvaluator",
     "AgentPosture",
     "get_posture_from_patience",
     "get_system_directive",

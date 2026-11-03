@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-133%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-141%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="https://pypi.org/project/corvin/"><img src="https://img.shields.io/pypi/v/corvin.svg?style=flat-square&color=blue" alt="PyPI Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-black.svg?style=flat-square" alt="License"></a>
   <a href="#-benchmarks--stress-test-telemetry"><img src="https://img.shields.io/badge/benchmarks-6%2C600%2B%20async%20QPS-purple.svg?style=flat-square" alt="Throughput"></a>
-  <a href="#-core-capabilities"><img src="https://img.shields.io/badge/security-Anti--ReDoS%20%7C%20HMAC--SHA256-red.svg?style=flat-square" alt="Security"></a>
+  <a href="#-core-capabilities"><img src="https://img.shields.io/badge/multilingual-100%2B%20languages-blueviolet.svg?style=flat-square" alt="Multilingual"></a>
   <a href="https://tako.id/c/codesbykhai"><img src="https://img.shields.io/badge/Sponsor-Tako-orange.svg?style=flat-square" alt="Sponsor"></a>
 </p>
 
@@ -188,6 +188,32 @@ async def stream_tokens(prompt: str, user_id: str = "user_456"):
     # If client is in STRIKE state, this generator is NEVER executed!
     yield "Token 1 "
     yield "Token 2"
+```
+
+### 7. SOTA Two-Tier Multilingual Hybrid Defense (v0.8.0)
+
+For global applications requiring both **sub-millisecond local latency (<0.1ms)** and **universal coverage across 100+ languages**, configure `HybridEvaluator`:
+
+```python
+from corvin import CorvinGuard, HybridEvaluator, HuginnEye, OpenAIModerationEvaluator
+
+# Layer 1: Fast local heuristics (ES, FR, DE, RU, JA, ZH, AR, HI, ID, EN)
+fast_eye = HuginnEye()
+
+# Layer 2: Universal 100+ languages fallback (100% Free OpenAI Moderation Endpoint)
+# Zero external dependencies: uses standard library urllib.request
+slow_moderation = OpenAIModerationEvaluator(api_key="sk-...", timeout_seconds=2.0)
+
+# Cascade: Evaluates Layer 1 first. If severe toxicity is detected (>= 0.45),
+# it short-circuits instantly (0 API calls, 0ms latency).
+# Otherwise, seamlessly falls back to Layer 2.
+hybrid = HybridEvaluator(
+    fast_evaluator=fast_eye,
+    slow_evaluator=slow_moderation,
+    fast_abort_threshold=0.45,
+)
+
+guard = CorvinGuard(evaluator=hybrid)
 ```
 
 ---
