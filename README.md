@@ -1,9 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="assets/logo_light.svg">
-    <img alt="Ravens Logo" src="assets/logo.svg" width="140">
-  </picture>
+  <img alt="Ravens Logo" src="assets/Ravens.png" width="220" style="border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
 </p>
 
 <h1 align="center">ravens</h1>
@@ -18,6 +14,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-black.svg?style=flat-square" alt="License"></a>
   <a href="#-benchmarks--stress-test-telemetry"><img src="https://img.shields.io/badge/benchmarks-6%2C600%2B%20async%20QPS-purple.svg?style=flat-square" alt="Throughput"></a>
   <a href="#-core-capabilities"><img src="https://img.shields.io/badge/security-Anti--ReDoS%20%7C%20HMAC--SHA256-red.svg?style=flat-square" alt="Security"></a>
+  <a href="https://tako.id/c/codesbykhai"><img src="https://img.shields.io/badge/Sponsor-Tako-orange.svg?style=flat-square" alt="Sponsor"></a>
 </p>
 
 ---
@@ -224,6 +221,20 @@ User: "Saya sungguh minta maaf tolong dimaafkan, tadi saya sedang pusing dan emo
 [Ledger Status] Patience: 25.2/100.0 | Real LLM Called: True
 [Agent]: "I need to set a boundary before we proceed. I expect respectful and considerate engagement. Let's maintain a polite and constructive conversation. Now, how can I assist you today?"
 ```
+
+---
+
+## ☕ Support & Sponsor
+
+If you find `ravens` valuable for your sovereign AI agent infrastructure, you can sponsor and support ongoing research and development:
+
+<p align="left">
+  <a href="https://tako.id/c/codesbykhai">
+    <img src="https://img.shields.io/badge/Sponsor%20on-Tako-orange?style=for-the-badge&logo=heart" alt="Support via Tako">
+  </a>
+</p>
+
+👉 **[Support @codesbykhai on Tako](https://tako.id/c/codesbykhai)**
 
 ---
 
