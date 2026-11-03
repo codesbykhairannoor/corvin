@@ -41,20 +41,35 @@ from .security.signer import (
     SecurityException,
     InvalidUserSignatureException,
 )
+from .integrations.fastapi import CorvinFastAPIMiddleware, CorvinRouteGuard
+from .integrations.litellm import CorvinLLMInterceptor
+from .integrations.langchain import CorvinCallbackHandler
 
 # Corvin Aliases
 CorvinGuard = RavenGuard
 CorvinPolicy = RavenPolicy
 CorvinException = RavenException
 CorvinStrikeException = RavenStrikeException
+RavenFastAPIMiddleware = CorvinFastAPIMiddleware
+RavenRouteGuard = CorvinRouteGuard
+RavenLLMInterceptor = CorvinLLMInterceptor
+RavenCallbackHandler = CorvinCallbackHandler
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 __all__ = [
     "CorvinGuard",
     "CorvinPolicy",
     "CorvinException",
     "CorvinStrikeException",
+    "CorvinFastAPIMiddleware",
+    "CorvinRouteGuard",
+    "CorvinLLMInterceptor",
+    "CorvinCallbackHandler",
+    "RavenFastAPIMiddleware",
+    "RavenRouteGuard",
+    "RavenLLMInterceptor",
+    "RavenCallbackHandler",
     "RavenGuard",
     "AgentPosture",
     "get_posture_from_patience",

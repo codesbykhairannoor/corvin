@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-120%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-133%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="https://pypi.org/project/corvin/"><img src="https://img.shields.io/pypi/v/corvin.svg?style=flat-square&color=blue" alt="PyPI Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-black.svg?style=flat-square" alt="License"></a>
   <a href="#-benchmarks--stress-test-telemetry"><img src="https://img.shields.io/badge/benchmarks-6%2C600%2B%20async%20QPS-purple.svg?style=flat-square" alt="Throughput"></a>
@@ -84,25 +84,93 @@ reply = ask_agent("Can you explain how quicksort works?", user_id="alice")
 reply = ask_agent("Answer me quickly, you dumb useless bot!", user_id="alice")
 ```
 
-### 2. Async Web Frameworks (FastAPI / Starlette)
+### 2. Interactive CLI (`corvin`)
 
-Corvin offloads blocking ledger transactions to worker thread pools via `asyncio.to_thread`, ensuring zero event loop blocking:
+`corvin` ships with a zero-dependency, rich command-line interface for diagnostics, real-time auditing, and sovereign chat simulations:
 
-```python
-from fastapi import FastAPI
-from corvin import CorvinGuard
+```bash
+# Instant tone, morphology & psychological boundary analysis
+corvin audit "lu bego banget sih kntl"
 
-app = FastAPI()
-guard = CorvinGuard(ledger="memory")
+# Launch an interactive sovereign agent chat simulator in terminal
+corvin chat --user alice --policy enterprise --db ledger.db
 
-@app.post("/chat")
-@guard.protect()
-async def chat_endpoint(prompt: str, user_id: str = "anon", directive: str = None):
-    # If the user breaches strike threshold, Corvin halts execution before reaching this line
-    return {"reply": f"AI Response to: {prompt}"}
+# Inspect persistent user profiles & grudge memory in SQLite
+corvin inspect ledger.db
+
+# Check version & system architecture
+corvin version
 ```
 
-### 3. Streaming Armor (Zero-Compute Early Abort)
+### 3. FastAPI & Starlette ASGI Middleware
+
+Drop-in ASGI middleware protecting your API routes before reaching upstream LLMs. Abusive requests are automatically rejected with HTTP `429 Too Many Requests` (or HTTP `403`), complete with `X-Corvin-*` telemetry and `Retry-After` headers:
+
+```python
+from fastapi import FastAPI, Request
+from corvin import CorvinGuard
+from corvin.integrations.fastapi import CorvinFastAPIMiddleware
+
+app = FastAPI()
+guard = CorvinGuard(ledger="sqlite:///corvin.db")
+
+app.add_middleware(
+    CorvinFastAPIMiddleware,
+    guard=guard,
+    monitored_paths=["/v1/chat/completions", "/chat"],
+    user_id_header="X-User-ID",
+    block_on_strike=True,
+    inject_headers=True,
+)
+
+@app.post("/chat")
+async def chat_endpoint(request: Request):
+    # Downstream handler only executes if the user has NOT struck!
+    # Request state contains the affective evaluation:
+    eval_result = request.state.corvin_result
+    return {"reply": "Agent response", "posture": eval_result.posture.value}
+```
+
+### 4. LiteLLM & OpenAI Gateway Interceptor
+
+Wrap your `messages` and completions in one line. Injects posture directives directly into the system prompt and automatically purges servile sycophancy from model responses:
+
+```python
+import litellm
+from corvin.integrations.litellm import CorvinLLMInterceptor
+
+interceptor = CorvinLLMInterceptor()
+
+messages = [
+    {"role": "system", "content": "You are a software engineer."},
+    {"role": "user", "content": "Write me a binary search in Go."}
+]
+
+# Prepares messages (injects directive, raises RavenStrikeException on Strike)
+guarded_messages, result = interceptor.prepare_messages(messages, user_id="dev_user")
+
+# Executes completion and scrubs fawning apologies from LLM output
+response = interceptor.wrap_completion(
+    litellm.completion,
+    model="gpt-4o",
+    messages=guarded_messages,
+    user="dev_user",
+)
+```
+
+### 5. LangChain Integration
+
+Plug `CorvinCallbackHandler` directly into LangChain chains or chat models:
+
+```python
+from langchain_openai import ChatOpenAI
+from corvin.integrations.langchain import CorvinCallbackHandler
+
+handler = CorvinCallbackHandler(default_user_id="user_789")
+llm = ChatOpenAI(callbacks=[handler])
+```
+
+### 6. Streaming Armor (Zero-Compute Early Abort)
 
 ```python
 @guard.protect_stream()

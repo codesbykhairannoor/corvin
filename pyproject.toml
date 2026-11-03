@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corvin"
-version = "0.7.0"
+version = "0.7.1"
 description = "A Cognitive Boundary & Grudge-Memory Engine for Sovereign AI Agents."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,7 +22,9 @@ keywords = [
     "boundary-defense",
     "sovereign-ai",
     "corvin",
-    "ravens"
+    "ravens",
+    "fastapi",
+    "middleware"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -36,6 +38,10 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+corvin = "corvin.cli:main"
+ravens = "corvin.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/codesbykhairannoor/corvin"
 Documentation = "https://github.com/codesbykhairannoor/corvin#readme"
@@ -44,8 +50,15 @@ Issues = "https://github.com/codesbykhairannoor/corvin/issues"
 Funding = "https://tako.id/c/codesbykhai"
 
 [project.optional-dependencies]
+fastapi = [
+    "fastapi>=0.100.0",
+    "starlette>=0.27.0",
+]
 dev = [
     "pytest>=8.0.0",
+    "fastapi>=0.100.0",
+    "starlette>=0.27.0",
+    "httpx>=0.25.0",
 ]
 
 [tool.hatch.build.targets.wheel]
