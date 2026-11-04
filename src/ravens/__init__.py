@@ -45,6 +45,7 @@ from corvin import (
     StreamInterceptor,
     SycophancyStripper,
     BoundedTTLCache,
+    UserLockRegistry,
     FrictionStrategy,
     FrictionDirective,
     RavenFrictionException,

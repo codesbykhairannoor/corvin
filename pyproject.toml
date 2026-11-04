@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corvin"
-version = "0.8.0"
+version = "0.8.1"
 description = "CORVIN: Cognitive Operational Resilience, Vigilance & Immunity Nexus for Sovereign AI Agents."
 readme = "README.md"
 requires-python = ">=3.10"

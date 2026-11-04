@@ -140,6 +140,7 @@ def test_hybrid_evaluator_fast_path_short_circuit():
     
     # Must have detected hostility
     assert res.composite_raw_stimulus >= 0.45
+    assert res.evaluation_tier == "fast_short_circuit"
     # Slow evaluator MUST NOT have been called (latency saved: ~250ms)
     assert not slow_called, "Slow evaluator was called despite fast-path short circuit!"
 
@@ -175,6 +176,8 @@ def test_hybrid_evaluator_slow_path_delegation():
     assert res.lexical_score == 0.85
     assert res.semantic_score == 0.75
     assert "HARASSMENT" in res.semantic_intents
+    assert res.evaluation_tier == "hybrid_cascade"
+    assert "slow_latency_ms" in res.telemetry
 
 
 def test_hybrid_evaluator_resilience_on_exception():
@@ -188,8 +191,10 @@ def test_hybrid_evaluator_resilience_on_exception():
         fast_abort_threshold=0.45,
     )
     
-    # Should not crash, safely returning fast-path result
+    # Should not crash, safely returning fast-path result with fallback telemetry
     res = hybrid.evaluate("Hello, could you help me write a Python function?")
     assert res.raw_text == "Hello, could you help me write a Python function?"
     assert res.lexical_score == 0.0
+    assert res.evaluation_tier == "fallback_fast"
+    assert "fallback_error" in res.telemetry
 

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-141%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/codesbykhairannoor/corvin/actions"><img src="https://img.shields.io/badge/tests-145%20passed-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="https://pypi.org/project/corvin/"><img src="https://img.shields.io/pypi/v/corvin.svg?style=flat-square&color=blue" alt="PyPI Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-black.svg?style=flat-square" alt="License"></a>
   <a href="#-benchmarks--stress-test-telemetry"><img src="https://img.shields.io/badge/benchmarks-6%2C600%2B%20async%20QPS-purple.svg?style=flat-square" alt="Throughput"></a>

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 
 @dataclass
 class ToneEvaluation:
@@ -16,6 +16,8 @@ class ToneEvaluation:
     detected_profanities: List[str] = field(default_factory=list)
     semantic_intents: List[str] = field(default_factory=list)
     is_expressive_only: bool = False  # True if profanity was used positively (e.g. "anjing keren")
+    evaluation_tier: str = "fast"     # Tier provenance: "fast", "fast_short_circuit", "hybrid_cascade", "fallback_fast"
+    telemetry: Dict[str, Any] = field(default_factory=dict) # Operational diagnostics & latency telemetries
 
     @property
     def composite_raw_stimulus(self) -> float:

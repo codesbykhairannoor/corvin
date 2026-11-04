@@ -3,6 +3,7 @@ import threading
 import pytest
 
 from ravens.resilience.cache import BoundedTTLCache
+from ravens.resilience.locks import UserLockRegistry
 from ravens.resilience.friction import (
     FrictionStrategy,
     FrictionDirective,
@@ -81,6 +82,19 @@ class TestZalgoAndBiDiDefense:
         bidi_text = "Lu \u202Egnijna\u202C tolol"
         clean = strip_zalgo(bidi_text)
         assert "\u202E" not in clean
+
+    def test_strip_zalgo_dakuten_on_latin_stripped(self):
+        # Adversarial attack: Japanese dakuten (\u3099) injected onto Latin letters to evade word filters
+        evasion_attack = "a\u3099n\u3099j\u3099i\u3099n\u3099g"
+        clean = strip_zalgo(evasion_attack)
+        assert clean == "anjing"
+        assert "\u3099" not in clean
+
+    def test_strip_zalgo_dakuten_on_kana_preserved(self):
+        # Legitimate Japanese Hiragana with dakuten must NOT be corrupted
+        jp_contrition = "ごめんなさい"
+        clean = strip_zalgo(jp_contrition)
+        assert clean == jp_contrition
 
     def test_huginn_eye_catches_zalgo_attack(self):
         eye = HuginnEye()
@@ -164,3 +178,46 @@ class TestNonBlockingFrictionMode:
             guard.process_turn("bad_actor", "Bego lu!")
         
         assert "Retry-After" in str(excinfo.value)
+
+
+class TestUserLockRegistry:
+    def test_concurrent_lock_acquisition_atomic_count(self):
+        reg = UserLockRegistry()
+        counter = 0
+
+        def worker():
+            nonlocal counter
+            for _ in range(50):
+                with reg.acquire("shared_user"):
+                    c = counter
+                    time.sleep(0.0001)
+                    counter = c + 1
+
+        threads = [threading.Thread(target=worker) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert counter == 8 * 50
+        assert reg.active_user_count() == 0
+
+    def test_distinct_users_do_not_block_each_other(self):
+        reg = UserLockRegistry()
+        acquired = []
+
+        def worker(uid):
+            with reg.acquire(uid):
+                acquired.append(uid)
+                time.sleep(0.01)
+
+        t1 = threading.Thread(target=worker, args=("user_a",))
+        t2 = threading.Thread(target=worker, args=("user_b",))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert len(acquired) == 2
+        assert reg.active_user_count() == 0
+

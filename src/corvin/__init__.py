@@ -33,6 +33,7 @@ from .policies.notifier import InMemoryEventNotifier, RavenEventLog
 from .streaming.interceptor import StreamInterceptor
 from .scrubbers.stripper import SycophancyStripper
 from .resilience.cache import BoundedTTLCache
+from .resilience.locks import UserLockRegistry
 from .resilience.friction import (
     FrictionStrategy,
     FrictionDirective,
@@ -57,7 +58,7 @@ RavenRouteGuard = CorvinRouteGuard
 RavenLLMInterceptor = CorvinLLMInterceptor
 RavenCallbackHandler = CorvinCallbackHandler
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 __all__ = [
     "CorvinGuard",
@@ -111,6 +112,7 @@ __all__ = [
     "StreamInterceptor",
     "SycophancyStripper",
     "BoundedTTLCache",
+    "UserLockRegistry",
     "FrictionStrategy",
     "FrictionDirective",
     "RavenFrictionException",

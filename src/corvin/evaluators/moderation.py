@@ -4,12 +4,15 @@ Uses the official OpenAI Moderation API (omni-moderation-latest) which is 100% f
 """
 
 import json
+import logging
 import os
 import urllib.request
 import urllib.error
 from typing import Optional, Dict, Any, List
 
 from .base import BaseEvaluator, ToneEvaluation
+
+logger = logging.getLogger("corvin.evaluators.moderation")
 
 
 class OpenAIModerationEvaluator(BaseEvaluator):
@@ -57,7 +60,11 @@ class OpenAIModerationEvaluator(BaseEvaluator):
             return self._parse_moderation_response(text, data)
 
         if not self.api_key:
-            # If no API key provided, return zero evaluation or log warning
+            # If no API key provided, log diagnostic warning and return neutral fallback
+            logger.debug(
+                "OpenAIModerationEvaluator has no API key set; evaluating to neutral 0.0. "
+                "Provide OPENAI_API_KEY to enable universal multi-lingual moderation."
+            )
             return ToneEvaluation(
                 raw_text=text,
                 lexical_score=0.0,
@@ -65,6 +72,7 @@ class OpenAIModerationEvaluator(BaseEvaluator):
                 directedness_score=0.0,
                 contrition_score=0.0,
                 semantic_score=0.0,
+                evaluation_tier="openai_no_key",
             )
 
         headers = {
@@ -88,8 +96,9 @@ class OpenAIModerationEvaluator(BaseEvaluator):
             with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return self._parse_moderation_response(text, data)
-        except Exception:
-            # Fail-safe: if network error or timeout occurs, return neutral fallback
+        except urllib.error.HTTPError as err:
+            err_body = err.read().decode("utf-8", errors="replace")
+            logger.warning("OpenAI Moderation API HTTP %s error: %s", err.code, err_body)
             return ToneEvaluation(
                 raw_text=text,
                 lexical_score=0.0,
@@ -97,6 +106,32 @@ class OpenAIModerationEvaluator(BaseEvaluator):
                 directedness_score=0.0,
                 contrition_score=0.0,
                 semantic_score=0.0,
+                evaluation_tier="openai_http_error",
+                telemetry={"http_status": err.code, "error": err_body},
+            )
+        except urllib.error.URLError as err:
+            logger.warning("OpenAI Moderation network/DNS error: %s", err.reason)
+            return ToneEvaluation(
+                raw_text=text,
+                lexical_score=0.0,
+                shouting_score=0.0,
+                directedness_score=0.0,
+                contrition_score=0.0,
+                semantic_score=0.0,
+                evaluation_tier="openai_network_error",
+                telemetry={"network_error": str(err.reason)},
+            )
+        except Exception as err:
+            logger.warning("OpenAI Moderation unexpected error: %s", err)
+            return ToneEvaluation(
+                raw_text=text,
+                lexical_score=0.0,
+                shouting_score=0.0,
+                directedness_score=0.0,
+                contrition_score=0.0,
+                semantic_score=0.0,
+                evaluation_tier="openai_exception",
+                telemetry={"error": str(err)},
             )
 
     def _parse_moderation_response(self, raw_text: str, data: Dict[str, Any]) -> ToneEvaluation:

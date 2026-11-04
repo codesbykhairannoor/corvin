@@ -19,6 +19,7 @@ from ..storage.memory import InMemoryLedger
 from ..storage.sqlite import SQLiteLedger
 from ..policies.base import RavenPolicy
 from ..resilience.cache import BoundedTTLCache
+from ..resilience.locks import UserLockRegistry
 from ..resilience.friction import FrictionStrategy, FrictionDirective, RavenFrictionException
 from ..security.signer import UserIdentitySigner
 
@@ -101,20 +102,13 @@ class RavenGuard:
             ttl_seconds=user_ttl_seconds,
         )
 
-        # Per-user concurrency locks guaranteeing atomic read-modify-write per user
-        self._user_locks: BoundedTTLCache[str, threading.Lock] = BoundedTTLCache(
-            max_size=max_active_users,
-            ttl_seconds=user_ttl_seconds,
-        )
-        self._global_lock = threading.Lock()
+        # Reference-counted user lock registry: Guarantees zero lock eviction race conditions
+        # and zero memory leaks under arbitrary concurrency loads.
+        self._user_locks = UserLockRegistry()
 
-    def _get_user_lock(self, user_id: str) -> threading.Lock:
-        with self._global_lock:
-            lock = self._user_locks.get(user_id)
-            if lock is None:
-                lock = threading.Lock()
-                self._user_locks.set(user_id, lock)
-            return lock
+    def _get_user_lock(self, user_id: str):
+        """Returns a reference-counted context manager lock for the user."""
+        return self._user_locks.acquire(user_id)
 
     def process_turn(
         self,
@@ -132,7 +126,7 @@ class RavenGuard:
 
         active_policy = policy or self.default_policy
 
-        with self._get_user_lock(user_id):
+        with self._user_locks.acquire(user_id):
             # 1. Retrieve profile from ledger with automatic natural time decay
             profile = self.ledger.get_or_create_profile(
                 user_id=user_id,
@@ -174,7 +168,7 @@ class RavenGuard:
                 stimulus_applied = min(100.0, base_stimulus * momentum)
 
                 if stimulus_applied > 10.0:
-                    profile.infraction_count += 1
+                    profile.infraction_count = min(1000, profile.infraction_count + 1)
 
                 profile.patience = max(0.0, profile.patience - stimulus_applied)
 

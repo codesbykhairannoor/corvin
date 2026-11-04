@@ -29,7 +29,7 @@ def test_cli_version_output():
         cmd_version(DummyArgs())
     output = out.getvalue()
     assert "C O R V I N" in output
-    assert "0.8.0" in output
+    assert "0.8.1" in output
     assert "Cognitive Operational Resilience" in output
     assert "Khairan Noor" in output
     assert "https://tako.id/c/codesbykhai" in output

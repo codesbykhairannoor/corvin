@@ -3,9 +3,13 @@ Hybrid Cascaded Evaluator: SOTA Two-Tier Fast-Path / Slow-Path Architecture.
 Combines sub-millisecond local heuristics (<0.1ms) with universal multi-lingual moderation.
 """
 
+import logging
+import time
 from typing import Optional, List
 from .base import BaseEvaluator, ToneEvaluation
 from .heuristic import HuginnEye
+
+logger = logging.getLogger("corvin.evaluators.hybrid")
 
 
 class HybridEvaluator(BaseEvaluator):
@@ -38,17 +42,28 @@ class HybridEvaluator(BaseEvaluator):
 
         # If fast-path detected strong hostility, short-circuit immediately!
         if fast_result.composite_raw_stimulus >= self.fast_abort_threshold:
+            fast_result.evaluation_tier = "fast_short_circuit"
             return fast_result
 
         # If no slow evaluator configured, return fast path result
         if self.slow_evaluator is None:
+            fast_result.evaluation_tier = "fast"
             return fast_result
 
         # Step 2: Fallback to universal multi-lingual slow-path
+        start_ts = time.perf_counter()
         try:
             slow_result = self.slow_evaluator.evaluate(text)
-        except Exception:
+            slow_latency_ms = (time.perf_counter() - start_ts) * 1000.0
+        except Exception as err:
             # Bulletproof fallback: If external evaluator fails or times out, safely return fast path
+            # with full logging & telemetry observability
+            logger.warning(
+                "HybridEvaluator slow evaluator exception: %s. Safely falling back to fast-path result.",
+                err
+            )
+            fast_result.evaluation_tier = "fallback_fast"
+            fast_result.telemetry["fallback_error"] = str(err)
             return fast_result
 
         # Merge results: take maximum hostility while preserving contrition & profanities
@@ -61,6 +76,10 @@ class HybridEvaluator(BaseEvaluator):
         merged_profanities = list(set(fast_result.detected_profanities + slow_result.detected_profanities))
         merged_intents = list(set(fast_result.semantic_intents + slow_result.semantic_intents))
 
+        merged_telemetry = dict(fast_result.telemetry)
+        merged_telemetry.update(slow_result.telemetry)
+        merged_telemetry["slow_latency_ms"] = round(slow_latency_ms, 2)
+
         return ToneEvaluation(
             raw_text=text,
             lexical_score=merged_lexical,
@@ -71,4 +90,6 @@ class HybridEvaluator(BaseEvaluator):
             detected_profanities=merged_profanities,
             semantic_intents=merged_intents,
             is_expressive_only=fast_result.is_expressive_only,
+            evaluation_tier="hybrid_cascade",
+            telemetry=merged_telemetry,
         )
