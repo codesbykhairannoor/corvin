@@ -120,6 +120,44 @@ def test_openai_moderation_evaluator_empty_and_no_key():
     assert res.lexical_score == 0.0
 
 
+def test_openai_moderation_evaluator_retry_on_429():
+    import urllib.error
+    import io
+    from unittest.mock import patch
+
+    calls = 0
+
+    def mock_urlopen(req, timeout=3.0):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            # Simulate first attempt failing with HTTP 429
+            fp = io.BytesIO(b'{"error": {"message": "Rate limit exceeded"}}')
+            raise urllib.error.HTTPError(
+                url="https://api.openai.com/v1/moderations",
+                code=429,
+                msg="Too Many Requests",
+                hdrs={"Retry-After": "0"},
+                fp=fp
+            )
+        # Second attempt succeeds
+        resp_data = b'{"results": [{"flagged": true, "categories": {"harassment": true}, "category_scores": {"harassment": 0.95}}]}'
+        return io.BytesIO(resp_data)
+
+    evaluator = OpenAIModerationEvaluator(
+        api_key="sk-test-retry",
+        max_retries=1,
+        retry_backoff_seconds=0.01
+    )
+
+    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+        res = evaluator.evaluate("test retry phrase")
+
+    assert calls == 2
+    assert res.lexical_score == 0.95
+    assert res.telemetry.get("retries") == 1
+
+
 def test_hybrid_evaluator_fast_path_short_circuit():
     slow_called = False
     

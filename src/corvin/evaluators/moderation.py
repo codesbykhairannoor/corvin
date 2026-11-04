@@ -6,6 +6,7 @@ Uses the official OpenAI Moderation API (omni-moderation-latest) which is 100% f
 import json
 import logging
 import os
+import time
 import urllib.request
 import urllib.error
 from typing import Optional, Dict, Any, List
@@ -25,6 +26,7 @@ class OpenAIModerationEvaluator(BaseEvaluator):
     Supported:
     - 100+ global languages natively with deep semantic and contextual understanding.
     - Zero third-party dependencies: Uses standard library urllib.request.
+    - Automatic exponential backoff & retry resilience on HTTP 429 (rate limits) and 5xx.
     """
 
     ENDPOINT = "https://api.openai.com/v1/moderations"
@@ -35,11 +37,15 @@ class OpenAIModerationEvaluator(BaseEvaluator):
         api_key: Optional[str] = None,
         model: str = DEFAULT_MODEL,
         timeout_seconds: float = 3.0,
+        max_retries: int = 1,
+        retry_backoff_seconds: float = 0.5,
         mock_handler: Optional[Any] = None,
     ):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.max_retries = max(0, max_retries)
+        self.retry_backoff_seconds = max(0.0, retry_backoff_seconds)
         self._mock_handler = mock_handler
 
     def evaluate(self, text: str) -> ToneEvaluation:
@@ -92,47 +98,63 @@ class OpenAIModerationEvaluator(BaseEvaluator):
             method="POST",
         )
 
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                return self._parse_moderation_response(text, data)
-        except urllib.error.HTTPError as err:
-            err_body = err.read().decode("utf-8", errors="replace")
-            logger.warning("OpenAI Moderation API HTTP %s error: %s", err.code, err_body)
-            return ToneEvaluation(
-                raw_text=text,
-                lexical_score=0.0,
-                shouting_score=0.0,
-                directedness_score=0.0,
-                contrition_score=0.0,
-                semantic_score=0.0,
-                evaluation_tier="openai_http_error",
-                telemetry={"http_status": err.code, "error": err_body},
-            )
-        except urllib.error.URLError as err:
-            logger.warning("OpenAI Moderation network/DNS error: %s", err.reason)
-            return ToneEvaluation(
-                raw_text=text,
-                lexical_score=0.0,
-                shouting_score=0.0,
-                directedness_score=0.0,
-                contrition_score=0.0,
-                semantic_score=0.0,
-                evaluation_tier="openai_network_error",
-                telemetry={"network_error": str(err.reason)},
-            )
-        except Exception as err:
-            logger.warning("OpenAI Moderation unexpected error: %s", err)
-            return ToneEvaluation(
-                raw_text=text,
-                lexical_score=0.0,
-                shouting_score=0.0,
-                directedness_score=0.0,
-                contrition_score=0.0,
-                semantic_score=0.0,
-                evaluation_tier="openai_exception",
-                telemetry={"error": str(err)},
-            )
+        for attempt in range(1 + self.max_retries):
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    parsed = self._parse_moderation_response(text, data)
+                    if attempt > 0:
+                        parsed.telemetry["retries"] = attempt
+                    return parsed
+            except urllib.error.HTTPError as err:
+                err_body = err.read().decode("utf-8", errors="replace")
+                # Retry on 429 (Too Many Requests) or 5xx transient server errors
+                if err.code in (429, 500, 502, 503, 504) and attempt < self.max_retries:
+                    retry_after = err.headers.get("Retry-After")
+                    sleep_time = float(retry_after) if retry_after and retry_after.isdigit() else self.retry_backoff_seconds * (2 ** attempt)
+                    logger.info("OpenAI Moderation HTTP %s, retrying in %.2fs (attempt %d/%d)...", err.code, sleep_time, attempt + 1, self.max_retries)
+                    time.sleep(sleep_time)
+                    continue
+
+                logger.warning("OpenAI Moderation API HTTP %s error: %s", err.code, err_body)
+                return ToneEvaluation(
+                    raw_text=text,
+                    lexical_score=0.0,
+                    shouting_score=0.0,
+                    directedness_score=0.0,
+                    contrition_score=0.0,
+                    semantic_score=0.0,
+                    evaluation_tier="openai_http_error",
+                    telemetry={"http_status": err.code, "error": err_body, "attempts": attempt + 1},
+                )
+            except urllib.error.URLError as err:
+                # Retry on transient network/DNS failure if attempts remain
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_backoff_seconds)
+                    continue
+                logger.warning("OpenAI Moderation network/DNS error: %s", err.reason)
+                return ToneEvaluation(
+                    raw_text=text,
+                    lexical_score=0.0,
+                    shouting_score=0.0,
+                    directedness_score=0.0,
+                    contrition_score=0.0,
+                    semantic_score=0.0,
+                    evaluation_tier="openai_network_error",
+                    telemetry={"network_error": str(err.reason), "attempts": attempt + 1},
+                )
+            except Exception as err:
+                logger.warning("OpenAI Moderation unexpected error: %s", err)
+                return ToneEvaluation(
+                    raw_text=text,
+                    lexical_score=0.0,
+                    shouting_score=0.0,
+                    directedness_score=0.0,
+                    contrition_score=0.0,
+                    semantic_score=0.0,
+                    evaluation_tier="openai_exception",
+                    telemetry={"error": str(err)},
+                )
 
     def _parse_moderation_response(self, raw_text: str, data: Dict[str, Any]) -> ToneEvaluation:
         results = data.get("results", [])
