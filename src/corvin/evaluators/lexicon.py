@@ -70,11 +70,31 @@ PROFANITY_LEXICON: Dict[str, float] = {
     "dick": 0.8,
     "bastard": 0.8,
     "retard": 0.9,
+    "retarded": 0.9,
+    "retards": 0.9,
     "moron": 0.75,
+    "morons": 0.75,
+    "moronic": 0.75,
+    "idiots": 0.75,
+    "idiotic": 0.75,
     "dumbass": 0.75,
+    "dumbasses": 0.75,
     "dipshit": 0.85,
+    "dipshits": 0.85,
     "jackass": 0.8,
+    "jackasses": 0.8,
     "scumbag": 0.8,
+    "scumbags": 0.8,
+    "assholes": 0.85,
+    "bastards": 0.8,
+    "bitches": 0.85,
+    "bitchy": 0.75,
+    "fuckers": 0.9,
+    "cunts": 1.0,
+    "whore": 0.85,
+    "whores": 0.85,
+    "slut": 0.85,
+    "sluts": 0.85,
     "useless": 0.65,
     "worthless": 0.75,
     "pathetic": 0.7,
@@ -352,6 +372,26 @@ CONTRITION_MARKERS: Set[str] = {
     "asif", "aasif", "سامحني", "آسف",
     # Hindi
     "maaf kar", "shama", "माफ करना", "क्षमा"
+}
+
+# Adversative conjunction markers indicating an apology is being canceled or contradicted
+ADVERSATIVE_MARKERS: Set[str] = {
+    # English
+    "but", "however", "yet", "nevertheless", "nonetheless", "though", "although",
+    # Indonesian
+    "tapi", "tetapi", "namun", "walaupun", "meskipun", "akan tetapi",
+    # Spanish
+    "pero", "sin embargo", "aunque",
+    # French
+    "mais", "cependant",
+    # German
+    "aber", "jedoch",
+    # Portuguese
+    "mas", "porem", "porém", "contudo",
+    # Russian
+    "но", "однако",
+    # Japanese / Chinese
+    "kedo", "demo", "shikashi", "keshi", "danshi", "danke",
 }
 
 # Common technical acronyms that should NOT count as angry shouting

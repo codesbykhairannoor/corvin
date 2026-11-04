@@ -13,7 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 print("=" * 80)
-print("🦅 CORVIN v0.8.1 REAL-WORLD DOGFOODING & END-TO-END VERIFICATION")
+print("🦅 CORVIN v0.8.2 REAL-WORLD DOGFOODING & END-TO-END VERIFICATION")
 print("=" * 80)
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ try:
     from corvin.integrations.langchain import CorvinCallbackHandler
     import ravens  # Legacy alias check
 
-    assert __version__ == "0.8.1", f"Version mismatch: {__version__}"
+    assert __version__ == "0.8.2", f"Version mismatch: {__version__}"
     assert ravens.RavenGuard is CorvinGuard, "RavenGuard alias mismatch"
     assert ravens.RavenStrikeException is CorvinStrikeException, "RavenStrikeException alias mismatch"
     print("   ✓ All core classes, policies, and framework integrations imported cleanly.")

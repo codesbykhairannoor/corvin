@@ -7,6 +7,7 @@ from .lexicon import (
     TARGET_PRONOUNS,
     POSITIVE_MODIFIERS,
     CONTRITION_MARKERS,
+    ADVERSATIVE_MARKERS,
     COMMON_ACRONYMS,
 )
 from ..morphology.normalizer import MorphologyNormalizer
@@ -92,6 +93,56 @@ class HuginnEye(BaseEvaluator):
         
         return min(1.0, exclamation_bonus) if caps_ratio > 0.25 else 0.0
 
+    def _lookup_profanity(self, token: str) -> Optional[Tuple[str, float]]:
+        target_token = PHONETIC_SLANG_ALIASES.get(token, token)
+        if target_token in PROFANITY_LEXICON:
+            return target_token, PROFANITY_LEXICON[target_token]
+
+        # Morphological inflection matching for plurals, participles, and suffixes
+        # Plural s / es
+        if target_token.endswith("es") and len(target_token) > 4:
+            stem = target_token[:-2]
+            if stem in PROFANITY_LEXICON:
+                return stem, PROFANITY_LEXICON[stem]
+        if target_token.endswith("s") and len(target_token) > 3:
+            stem = target_token[:-1]
+            if stem in PROFANITY_LEXICON:
+                return stem, PROFANITY_LEXICON[stem]
+
+        # Participle ed / ing
+        if target_token.endswith("ed") and len(target_token) > 4:
+            stem = target_token[:-2]
+            if stem in PROFANITY_LEXICON:
+                return stem, PROFANITY_LEXICON[stem]
+            stem1 = target_token[:-1]
+            if stem1 in PROFANITY_LEXICON:
+                return stem1, PROFANITY_LEXICON[stem1]
+
+        if target_token.endswith("ing") and len(target_token) > 5:
+            stem = target_token[:-3]
+            if stem in PROFANITY_LEXICON:
+                return stem, PROFANITY_LEXICON[stem]
+            stem_e = target_token[:-3] + "e"
+            if stem_e in PROFANITY_LEXICON:
+                return stem_e, PROFANITY_LEXICON[stem_e]
+
+        # Adjective ic
+        if target_token.endswith("ic") and len(target_token) > 4:
+            stem_t = target_token[:-2] + "t"
+            if stem_t in PROFANITY_LEXICON:
+                return stem_t, PROFANITY_LEXICON[stem_t]
+            stem = target_token[:-2]
+            if stem in PROFANITY_LEXICON:
+                return stem, PROFANITY_LEXICON[stem]
+
+        # Indonesian reduplication: anjing2, babi2, tolol2, bego2
+        if target_token.endswith("2") and len(target_token) > 2:
+            stem = target_token[:-1]
+            if stem in PROFANITY_LEXICON:
+                return stem, PROFANITY_LEXICON[stem]
+
+        return None
+
     def evaluate(self, text: str) -> ToneEvaluation:
         text_clean = text.strip()
         if not text_clean:
@@ -125,14 +176,13 @@ class HuginnEye(BaseEvaluator):
         # 3. Single-token profanities and phonetic aliases
         profane_indices: List[Tuple[int, str, float]] = []
         for i, token in enumerate(tokens_lower):
-            target_token = PHONETIC_SLANG_ALIASES.get(token, token)
-
-            if target_token in PROFANITY_LEXICON:
-                severity = PROFANITY_LEXICON[target_token]
-                if target_token not in detected_profanities:
-                    detected_profanities.append(target_token)
+            match = self._lookup_profanity(token)
+            if match is not None:
+                matched_word, severity = match
+                if matched_word not in detected_profanities:
+                    detected_profanities.append(matched_word)
                 max_severity = max(max_severity, severity)
-                profane_indices.append((i, target_token, severity))
+                profane_indices.append((i, matched_word, severity))
 
         # 4. Sociopragmatic Directedness Evaluation
         has_profanity = len(detected_profanities) > 0
@@ -198,9 +248,14 @@ class HuginnEye(BaseEvaluator):
                     break
 
         if has_contrition:
+            # Check for adversative cancelation ("I'm sorry, BUT...")
+            has_adversative = bool(set(tokens_lower) & ADVERSATIVE_MARKERS) or any(
+                adv in text_lower for adv in ADVERSATIVE_MARKERS if " " in adv or any(ord(c) > 127 for c in adv)
+            )
+
             # Apology is strictly voided if combined with ANY profanity, ANY hostile semantic intent,
-            # or aggressive shouting (Anti-Contrition Smuggling Defense)
-            if has_profanity or semantic_score > 0.0 or shouting_score > 0.2:
+            # aggressive shouting, or an adversative clause (Anti-Contrition Smuggling Defense)
+            if has_profanity or semantic_score > 0.0 or shouting_score > 0.2 or has_adversative:
                 contrition_score = 0.0
             else:
                 contrition_score = 0.8
