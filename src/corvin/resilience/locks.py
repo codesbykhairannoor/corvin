@@ -43,11 +43,13 @@ class UserLockRegistry:
                 self._locks[user_id] = ref_lock
             ref_lock.ref_count += 1
 
-        ref_lock.lock.acquire()
         try:
-            yield ref_lock.lock
+            ref_lock.lock.acquire()
+            try:
+                yield ref_lock.lock
+            finally:
+                ref_lock.lock.release()
         finally:
-            ref_lock.lock.release()
             with self._global_lock:
                 ref_lock.ref_count -= 1
                 if ref_lock.ref_count <= 0:
@@ -57,4 +59,8 @@ class UserLockRegistry:
         """Returns the number of user locks currently tracked in the registry."""
         with self._global_lock:
             return len(self._locks)
+
+    def __len__(self) -> int:
+        """Returns the number of user locks currently tracked in the registry."""
+        return self.active_user_count()
 
