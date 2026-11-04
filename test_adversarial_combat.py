@@ -1,5 +1,5 @@
 """
-Adversarial Combat & Live Dogfood Verification for Corvin v0.8.1.
+Adversarial Combat & Live Dogfood Verification for Corvin v0.8.2.
 Tests real-world efficacy against adversarial attacks, multilingual insults,
 evasion bypasses, passive-aggression, contrition smuggling, false-positives,
 and live LLM token saving under Strike.
@@ -30,7 +30,7 @@ from corvin import (
 )
 
 print("=" * 80)
-print("🥋 CORVIN v0.8.1 BATTLE-TESTED ADVERSARIAL COMBAT SIMULATION")
+print("🥋 CORVIN v0.8.3 BATTLE-TESTED ADVERSARIAL COMBAT SIMULATION")
 print("=" * 80)
 
 # ==============================================================================

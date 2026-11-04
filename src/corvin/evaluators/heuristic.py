@@ -8,6 +8,7 @@ from .lexicon import (
     POSITIVE_MODIFIERS,
     CONTRITION_MARKERS,
     ADVERSATIVE_MARKERS,
+    POLITE_REQUEST_MARKERS,
     COMMON_ACRONYMS,
 )
 from ..morphology.normalizer import MorphologyNormalizer
@@ -259,7 +260,10 @@ class HuginnEye(BaseEvaluator):
                 contrition_score = 0.0
             else:
                 contrition_score = 0.8
-                if any(w in tokens_lower for w in ["tolong", "please", "mohon", "bantu"]):
+                has_polite = bool(set(tokens_lower) & POLITE_REQUEST_MARKERS) or any(
+                    req in text_lower for req in POLITE_REQUEST_MARKERS if " " in req or any(ord(c) > 127 for c in req)
+                )
+                if has_polite:
                     contrition_score = 1.0
 
         return ToneEvaluation(

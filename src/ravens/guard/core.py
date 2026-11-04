@@ -154,7 +154,11 @@ class RavenGuard:
 
             if eval_output.contrition_score > 0.5:
                 restitution = active_policy.pardon_delta * eval_output.contrition_score
-                profile.patience = min(100.0, profile.patience + restitution)
+                # Contrite Tit-for-Tat (Nowak & Sigmund, 1993): Sincere contrition guarantees unblocking from STRIKE
+                if profile.patience < active_policy.threshold_strike:
+                    profile.patience = min(100.0, max(active_policy.threshold_strike, profile.patience + restitution))
+                else:
+                    profile.patience = min(100.0, profile.patience + restitution)
                 tracker.damp(factor=0.3)
             else:
                 # 4. Calculate incoming hostile stimulus S(x_t)

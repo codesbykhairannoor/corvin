@@ -38,7 +38,7 @@ if not MGMT_KEY:
 MODEL_ID = "nvidia/nemotron-3.5-lightning:free"
 
 print("=" * 80)
-print("🦅 CORVIN v0.8.2 LIVE ADVERSARIAL COMBAT WITH REAL PRODUCTION LLM")
+print("🦅 CORVIN v0.8.3 LIVE ADVERSARIAL COMBAT WITH REAL PRODUCTION LLM")
 print("=" * 80)
 
 # Step 0: Provision an ephemeral scoped key ($0.05 limit)
