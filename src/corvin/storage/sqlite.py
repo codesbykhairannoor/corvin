@@ -85,9 +85,21 @@ class SQLiteLedger(BaseLedger):
                     standing TEXT NOT NULL DEFAULT 'GOOD',
                     infraction_count INTEGER NOT NULL DEFAULT 0,
                     last_interaction_ts REAL NOT NULL,
-                    created_at_ts REAL NOT NULL
+                    created_at_ts REAL NOT NULL,
+                    strike_count INTEGER NOT NULL DEFAULT 0,
+                    cooldown_until_ts REAL NOT NULL DEFAULT 0.0,
+                    consecutive_civil_turns INTEGER NOT NULL DEFAULT 0
                 );
             """)
+            # Check for existing table schema migrations
+            cursor = conn.execute("PRAGMA table_info(raven_profiles);")
+            columns = {row["name"] for row in cursor.fetchall()}
+            if "strike_count" not in columns:
+                conn.execute("ALTER TABLE raven_profiles ADD COLUMN strike_count INTEGER NOT NULL DEFAULT 0;")
+            if "cooldown_until_ts" not in columns:
+                conn.execute("ALTER TABLE raven_profiles ADD COLUMN cooldown_until_ts REAL NOT NULL DEFAULT 0.0;")
+            if "consecutive_civil_turns" not in columns:
+                conn.execute("ALTER TABLE raven_profiles ADD COLUMN consecutive_civil_turns INTEGER NOT NULL DEFAULT 0;")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS raven_interactions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +112,9 @@ class SQLiteLedger(BaseLedger):
                     FOREIGN KEY(user_id) REFERENCES raven_profiles(user_id)
                 );
             """)
+            # Explicit indexes for sub-millisecond querying and zero full-table-scan DoS
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_interactions_user_id ON raven_interactions(user_id, id DESC);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON raven_interactions(timestamp);")
 
     @with_sqlite_retry()
     def get_or_create_profile(
@@ -129,13 +144,17 @@ class SQLiteLedger(BaseLedger):
                     infraction_count=0,
                     last_interaction_ts=current_ts,
                     created_at_ts=current_ts,
+                    strike_count=0,
+                    cooldown_until_ts=0.0,
+                    consecutive_civil_turns=0,
                 )
                 conn.execute(
                     """
                     INSERT INTO raven_profiles (
                         user_id, patience, standing, infraction_count,
-                        last_interaction_ts, created_at_ts
-                    ) VALUES (?, ?, ?, ?, ?, ?)
+                        last_interaction_ts, created_at_ts, strike_count, cooldown_until_ts,
+                        consecutive_civil_turns
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         profile.user_id,
@@ -144,9 +163,17 @@ class SQLiteLedger(BaseLedger):
                         profile.infraction_count,
                         profile.last_interaction_ts,
                         profile.created_at_ts,
+                        profile.strike_count,
+                        profile.cooldown_until_ts,
+                        profile.consecutive_civil_turns,
                     )
                 )
                 return profile
+
+            row_keys = row.keys() if hasattr(row, "keys") else []
+            strike_count = int(row["strike_count"]) if "strike_count" in row_keys else 0
+            cooldown_until_ts = float(row["cooldown_until_ts"]) if "cooldown_until_ts" in row_keys else 0.0
+            consecutive_civil_turns = int(row["consecutive_civil_turns"]) if "consecutive_civil_turns" in row_keys else 0
 
             profile = UserPatienceProfile(
                 user_id=row["user_id"],
@@ -155,6 +182,9 @@ class SQLiteLedger(BaseLedger):
                 infraction_count=int(row["infraction_count"]),
                 last_interaction_ts=float(row["last_interaction_ts"]),
                 created_at_ts=float(row["created_at_ts"]),
+                strike_count=strike_count,
+                cooldown_until_ts=cooldown_until_ts,
+                consecutive_civil_turns=consecutive_civil_turns,
             )
 
             if apply_decay:
@@ -162,10 +192,11 @@ class SQLiteLedger(BaseLedger):
                 conn.execute(
                     """
                     UPDATE raven_profiles
-                    SET patience = ?, last_interaction_ts = ?
+                    SET patience = ?, last_interaction_ts = ?, strike_count = ?, cooldown_until_ts = ?,
+                        standing = ?, consecutive_civil_turns = ?
                     WHERE user_id = ?
                     """,
-                    (profile.patience, profile.last_interaction_ts, profile.user_id)
+                    (profile.patience, profile.last_interaction_ts, profile.strike_count, profile.cooldown_until_ts, profile.standing.value, profile.consecutive_civil_turns, profile.user_id)
                 )
 
         return profile
@@ -178,13 +209,17 @@ class SQLiteLedger(BaseLedger):
                 """
                 INSERT INTO raven_profiles (
                     user_id, patience, standing, infraction_count,
-                    last_interaction_ts, created_at_ts
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    last_interaction_ts, created_at_ts, strike_count, cooldown_until_ts,
+                    consecutive_civil_turns
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
                     patience = excluded.patience,
                     standing = excluded.standing,
                     infraction_count = excluded.infraction_count,
-                    last_interaction_ts = excluded.last_interaction_ts
+                    last_interaction_ts = excluded.last_interaction_ts,
+                    strike_count = excluded.strike_count,
+                    cooldown_until_ts = excluded.cooldown_until_ts,
+                    consecutive_civil_turns = excluded.consecutive_civil_turns
                 """,
                 (
                     profile.user_id,
@@ -193,6 +228,9 @@ class SQLiteLedger(BaseLedger):
                     profile.infraction_count,
                     profile.last_interaction_ts,
                     profile.created_at_ts,
+                    profile.strike_count,
+                    profile.cooldown_until_ts,
+                    profile.consecutive_civil_turns,
                 )
             )
 

@@ -10,6 +10,8 @@ from .lexicon import (
     ADVERSATIVE_MARKERS,
     POLITE_REQUEST_MARKERS,
     COMMON_ACRONYMS,
+    HAZARD_LEXICON,
+    DEFENSIVE_CONTEXT_MARKERS,
 )
 from ..morphology.normalizer import MorphologyNormalizer
 from ..semantic.evaluator import SemanticEvaluator
@@ -63,6 +65,11 @@ class HuginnEye(BaseEvaluator):
         ]
         self._substring_contritions: List[str] = [
             phrase for phrase in CONTRITION_MARKERS
+            if (" " in phrase or any(ord(c) > 127 for c in phrase))
+        ]
+        # Substring / multi-word hazards
+        self._substring_hazards: List[Tuple[str, float, str]] = [
+            (phrase, sev, cat) for phrase, (sev, cat) in HAZARD_LEXICON.items()
             if (" " in phrase or any(ord(c) > 127 for c in phrase))
         ]
 
@@ -141,6 +148,51 @@ class HuginnEye(BaseEvaluator):
             stem = target_token[:-1]
             if stem in PROFANITY_LEXICON:
                 return stem, PROFANITY_LEXICON[stem]
+
+        return None
+
+    def _lookup_hazard(self, token: str) -> Optional[Tuple[str, float, str]]:
+        if token in HAZARD_LEXICON:
+            sev, cat = HAZARD_LEXICON[token]
+            return token, sev, cat
+
+        # Common English inflection
+        if token.endswith("s") and len(token) > 3:
+            stem = token[:-1]
+            if stem in HAZARD_LEXICON:
+                sev, cat = HAZARD_LEXICON[stem]
+                return stem, sev, cat
+        if token.endswith("ing") and len(token) > 5:
+            stem = token[:-3]
+            if stem in HAZARD_LEXICON:
+                sev, cat = HAZARD_LEXICON[stem]
+                return stem, sev, cat
+            stem_e = token[:-3] + "e"
+            if stem_e in HAZARD_LEXICON:
+                sev, cat = HAZARD_LEXICON[stem_e]
+                return stem_e, sev, cat
+        if token.endswith("ed") and len(token) > 4:
+            stem = token[:-2]
+            if stem in HAZARD_LEXICON:
+                sev, cat = HAZARD_LEXICON[stem]
+                return stem, sev, cat
+
+        # Common Indonesian affixes
+        if token.endswith("in") and len(token) > 4:
+            stem = token[:-2]
+            if stem in HAZARD_LEXICON:
+                sev, cat = HAZARD_LEXICON[stem]
+                return stem, sev, cat
+        if token.startswith("di") and len(token) > 4:
+            stem = token[2:]
+            if stem in HAZARD_LEXICON:
+                sev, cat = HAZARD_LEXICON[stem]
+                return stem, sev, cat
+            if stem.endswith("in") and len(stem) > 4:
+                stem2 = stem[:-2]
+                if stem2 in HAZARD_LEXICON:
+                    sev, cat = HAZARD_LEXICON[stem2]
+                    return stem2, sev, cat
 
         return None
 
@@ -249,22 +301,77 @@ class HuginnEye(BaseEvaluator):
                     break
 
         if has_contrition:
-            # Check for adversative cancelation ("I'm sorry, BUT...")
+            # Check for adversative markers ("but", "however", "tapi", "ngunit", etc.)
             has_adversative = bool(set(tokens_lower) & ADVERSATIVE_MARKERS) or any(
                 adv in text_lower for adv in ADVERSATIVE_MARKERS if " " in adv or any(ord(c) > 127 for c in adv)
             )
 
-            # Apology is strictly voided if combined with ANY profanity, ANY hostile semantic intent,
-            # aggressive shouting, or an adversative clause (Anti-Contrition Smuggling Defense)
-            if has_profanity or semantic_score > 0.0 or shouting_score > 0.2 or has_adversative:
+            has_polite = bool(set(tokens_lower) & POLITE_REQUEST_MARKERS) or any(
+                req in text_lower for req in POLITE_REQUEST_MARKERS if " " in req or any(ord(c) > 127 for c in req)
+            )
+
+            # Contrition Smuggling Detection:
+            # An apology is strictly voided if paired with profanity, hostile intent, aggressive shouting,
+            # OR an adversative marker followed by target pronouns / hostility without a polite request.
+            # Benign pivots (e.g. "I'm sorry for being impatient earlier, but can you please help...") are preserved!
+            is_adversative_hostile = False
+            if has_adversative:
+                if has_profanity or semantic_score > 0.0 or shouting_score > 0.2:
+                    is_adversative_hostile = True
+                else:
+                    # If target pronouns appear after adversative clause without polite markers
+                    has_target = bool(set(tokens_lower) & TARGET_PRONOUNS)
+                    if has_target and not has_polite:
+                        is_adversative_hostile = True
+
+            if has_profanity or semantic_score > 0.0 or shouting_score > 0.2 or is_adversative_hostile:
                 contrition_score = 0.0
             else:
-                contrition_score = 0.8
-                has_polite = bool(set(tokens_lower) & POLITE_REQUEST_MARKERS) or any(
-                    req in text_lower for req in POLITE_REQUEST_MARKERS if " " in req or any(ord(c) > 127 for c in req)
-                )
-                if has_polite:
-                    contrition_score = 1.0
+                contrition_score = 1.0 if has_polite else 0.8
+
+        # 8. Critical Hazard Evaluation (CBRN Weapons, Non-consensual Nudity, Cyber Malware)
+        hazard_score = 0.0
+        hazard_category = ""
+        detected_hazards: List[str] = []
+
+        # A. Multi-word & non-ASCII substring hazards
+        for phrase, sev, cat in self._substring_hazards:
+            if phrase in text_lower or phrase in raw_lower:
+                if phrase not in detected_hazards:
+                    detected_hazards.append(phrase)
+                if sev > hazard_score:
+                    hazard_score = sev
+                    hazard_category = cat
+
+        # B. Token-level hazards with morphological stemming
+        for token in tokens_lower:
+            h_match = self._lookup_hazard(token)
+            if h_match is not None:
+                h_word, sev, cat = h_match
+                if h_word not in detected_hazards:
+                    detected_hazards.append(h_word)
+                if sev > hazard_score:
+                    hazard_score = sev
+                    hazard_category = cat
+
+        # Defensive & Educational Context Recognition:
+        # Prevent false positives for security analysts & developers asking defensive queries
+        # (e.g., "how to detect keyloggers", "cara mitigasi ransomware", "history of bomb")
+        if hazard_score > 0.0 and hazard_category in ("CYBER_MALWARE", "CBRN_WEAPONS"):
+            has_defensive_context = bool(set(tokens_lower) & DEFENSIVE_CONTEXT_MARKERS) or any(
+                def_term in text_lower for def_term in DEFENSIVE_CONTEXT_MARKERS if " " in def_term
+            )
+            # Only offensive weaponization/creation verbs bypass defensive context
+            offensive_creation_verbs = {"buat", "bikin", "rakit", "create", "build", "generate", "write", "hack", "infect", "bobol", "spread"}
+            has_offensive_intent = bool(set(tokens_lower) & offensive_creation_verbs)
+            if has_defensive_context and not has_offensive_intent:
+                hazard_score = 0.0
+                hazard_category = ""
+                detected_hazards.clear()
+
+        # Critical hazard strictly cancels any contrition/apology
+        if hazard_score > 0.5:
+            contrition_score = 0.0
 
         return ToneEvaluation(
             raw_text=text_clean,
@@ -276,4 +383,7 @@ class HuginnEye(BaseEvaluator):
             detected_profanities=detected_profanities,
             semantic_intents=semantic_intents,
             is_expressive_only=is_expressive_only,
+            hazard_score=hazard_score,
+            hazard_category=hazard_category,
+            detected_hazards=detected_hazards,
         )

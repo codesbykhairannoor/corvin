@@ -40,6 +40,7 @@ from corvin import (
     create_enterprise_support_policy,
     create_gaming_npc_policy,
     create_security_sentinel_policy,
+    create_progressive_cooldown_policy,
     InMemoryEventNotifier,
     RavenEventLog,
     StreamInterceptor,

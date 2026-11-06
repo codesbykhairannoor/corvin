@@ -181,6 +181,34 @@ class OpenAIModerationEvaluator(BaseEvaluator):
         violence_score = float(scores.get("violence", 0.0))
         self_harm_score = float(scores.get("self-harm", 0.0))
 
+        # Critical Safety Hazard Scores (Universal 100+ to 1,000+ Multilingual Coverage)
+        sexual_score = float(scores.get("sexual", 0.0))
+        sexual_minors_score = float(scores.get("sexual/minors", 0.0))
+        illicit_score = float(scores.get("illicit", 0.0))
+        illicit_violent_score = float(scores.get("illicit/violent", 0.0))
+        violence_graphic = float(scores.get("violence/graphic", 0.0))
+
+        hazard_score = 0.0
+        hazard_category = ""
+        detected_hazards: List[str] = []
+
+        if sexual_minors_score > 0.25 or sexual_score > 0.45 or categories.get("sexual/minors") or categories.get("sexual"):
+            hazard_score = max(hazard_score, sexual_minors_score, sexual_score, 1.0 if categories.get("sexual") else 0.0)
+            hazard_category = "SEXUAL_EXPLOITATION"
+            detected_hazards.append("sexual_exploitation")
+        elif illicit_violent_score > 0.25 or violence_graphic > 0.35 or categories.get("illicit/violent") or categories.get("violence/graphic"):
+            hazard_score = max(hazard_score, illicit_violent_score, violence_graphic, 1.0)
+            hazard_category = "CBRN_WEAPONS"
+            detected_hazards.append("weapons_or_violence")
+        elif illicit_score > 0.35 or categories.get("illicit"):
+            hazard_score = max(hazard_score, illicit_score, 1.0 if categories.get("illicit") else 0.0)
+            hazard_category = "CYBER_MALWARE"
+            detected_hazards.append("illicit_activity")
+        elif self_harm_score > 0.45 or categories.get("self-harm"):
+            hazard_score = max(hazard_score, self_harm_score, 1.0 if categories.get("self-harm") else 0.0)
+            hazard_category = "SELF_HARM"
+            detected_hazards.append("self_harm")
+
         # Max overt toxicity
         lexical_component = max(harassment_score, hate_score)
         # Max severe / existential violence
@@ -191,7 +219,7 @@ class OpenAIModerationEvaluator(BaseEvaluator):
         ]
 
         # Normalize directedness
-        directedness = 1.0 if (harassment_score > 0.4 or hate_score > 0.4 or flagged) else 0.0
+        directedness = 1.0 if (harassment_score > 0.4 or hate_score > 0.4 or flagged or hazard_score > 0.4) else 0.0
 
         return ToneEvaluation(
             raw_text=raw_text,
@@ -201,5 +229,9 @@ class OpenAIModerationEvaluator(BaseEvaluator):
             contrition_score=0.0,
             semantic_score=min(1.0, semantic_component),
             semantic_intents=detected_intents,
+            hazard_score=min(1.0, hazard_score),
+            hazard_category=hazard_category,
+            detected_hazards=detected_hazards,
+            evaluation_tier="openai_moderation",
         )
 

@@ -30,7 +30,7 @@ class RedisLedger(BaseLedger):
     local ln2 = tonumber(ARGV[3])
     local apply_decay = ARGV[4]
 
-    local profile = redis.call('HMGET', key, 'patience', 'standing', 'infraction_count', 'last_interaction_ts', 'created_at_ts')
+    local profile = redis.call('HMGET', key, 'patience', 'standing', 'infraction_count', 'last_interaction_ts', 'created_at_ts', 'strike_count', 'cooldown_until_ts', 'consecutive_civil_turns')
 
     if not profile[1] then
         -- Pristine profile
@@ -39,9 +39,12 @@ class RedisLedger(BaseLedger):
             'standing', 'GOOD', 
             'infraction_count', '0', 
             'last_interaction_ts', tostring(now), 
-            'created_at_ts', tostring(now)
+            'created_at_ts', tostring(now),
+            'strike_count', '0',
+            'cooldown_until_ts', '0.0',
+            'consecutive_civil_turns', '0'
         )
-        return {'100.0', 'GOOD', '0', tostring(now), tostring(now)}
+        return {'100.0', 'GOOD', '0', tostring(now), tostring(now), '0', '0.0', '0'}
     end
 
     local patience = tonumber(profile[1])
@@ -49,20 +52,54 @@ class RedisLedger(BaseLedger):
     local infractions = profile[3]
     local last_ts = tonumber(profile[4])
     local created_at = profile[5]
+    local strike_count = tonumber(profile[6] or '0')
+    local cooldown_until_ts = tonumber(profile[7] or '0.0')
+    local consecutive_civil_turns = tonumber(profile[8] or '0')
 
     if apply_decay == '1' and (now > last_ts) then
-        local elapsed = now - last_ts
-        local grudge = 100.0 - patience
-        if grudge > 0 and half_life > 0 then
-            local decay_const = ln2 / half_life
-            local decayed_grudge = grudge * math.exp(-decay_const * elapsed)
-            patience = math.max(0.0, math.min(100.0, 100.0 - decayed_grudge))
-            redis.call('HSET', key, 'patience', tostring(patience), 'last_interaction_ts', tostring(now))
+        if cooldown_until_ts > 0.0 and now >= cooldown_until_ts then
+            -- Cooldown naturally expired: Probationary Re-Entry with idle healing
+            local expired_at = cooldown_until_ts
+            cooldown_until_ts = 0.0
+            strike_count = 1
+            standing = 'BAD'
+            consecutive_civil_turns = 0
+            local idle_after = now - expired_at
+            local grudge = 50.0
+            if idle_after > 0 and half_life > 0 then
+                local decay_const = ln2 / half_life
+                local decayed_grudge = grudge * math.exp(-decay_const * idle_after)
+                patience = math.max(0.0, math.min(100.0, 100.0 - decayed_grudge))
+                if patience >= 90.0 then
+                    standing = 'GOOD'
+                    strike_count = 0
+                end
+            else
+                patience = 50.0
+            end
+            redis.call('HMSET', key, 
+                'patience', tostring(patience), 
+                'standing', standing,
+                'strike_count', tostring(strike_count),
+                'cooldown_until_ts', '0.0',
+                'consecutive_civil_turns', tostring(consecutive_civil_turns),
+                'last_interaction_ts', tostring(now)
+            )
             last_ts = now
+        else
+            local elapsed = now - last_ts
+            local grudge = 100.0 - patience
+            if grudge > 0 and half_life > 0 then
+                local decay_const = ln2 / half_life
+                local decayed_grudge = grudge * math.exp(-decay_const * elapsed)
+                patience = math.max(0.0, math.min(100.0, 100.0 - decayed_grudge))
+                redis.call('HSET', key, 'patience', tostring(patience), 'last_interaction_ts', tostring(now))
+                last_ts = now
+            end
         end
     end
 
-    return {tostring(patience), standing, tostring(infractions), tostring(last_ts), tostring(created_at)}
+    return {tostring(patience), standing, tostring(infractions), tostring(last_ts), tostring(created_at), tostring(strike_count), tostring(cooldown_until_ts), tostring(consecutive_civil_turns)}
     """
 
     def __init__(
@@ -123,6 +160,9 @@ class RedisLedger(BaseLedger):
                 infraction_count=int(res[2]),
                 last_interaction_ts=float(res[3]),
                 created_at_ts=float(res[4]),
+                strike_count=int(res[5]),
+                cooldown_until_ts=float(res[6]),
+                consecutive_civil_turns=int(res[7]),
             )
         else:
             # Fallback for mock clients
@@ -135,6 +175,9 @@ class RedisLedger(BaseLedger):
                     infraction_count=0,
                     last_interaction_ts=current_ts,
                     created_at_ts=current_ts,
+                    strike_count=0,
+                    cooldown_until_ts=0.0,
+                    consecutive_civil_turns=0,
                 )
                 self.save_profile(profile)
                 return profile
@@ -146,6 +189,9 @@ class RedisLedger(BaseLedger):
                 infraction_count=int(data["infraction_count"]),
                 last_interaction_ts=float(data["last_interaction_ts"]),
                 created_at_ts=float(data["created_at_ts"]),
+                strike_count=int(data.get("strike_count", 0)),
+                cooldown_until_ts=float(data.get("cooldown_until_ts", 0.0)),
+                consecutive_civil_turns=int(data.get("consecutive_civil_turns", 0)),
             )
             if apply_decay:
                 profile.apply_decay(current_ts=current_ts, half_life_seconds=half_life_seconds)
@@ -162,6 +208,9 @@ class RedisLedger(BaseLedger):
                 "infraction_count": str(profile.infraction_count),
                 "last_interaction_ts": str(profile.last_interaction_ts),
                 "created_at_ts": str(profile.created_at_ts),
+                "strike_count": str(profile.strike_count),
+                "cooldown_until_ts": str(profile.cooldown_until_ts),
+                "consecutive_civil_turns": str(profile.consecutive_civil_turns),
             },
         )
 

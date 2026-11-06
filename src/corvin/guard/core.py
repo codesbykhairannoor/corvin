@@ -139,6 +139,46 @@ class RavenGuard:
             # 2. Evaluate prompt tone via The Eye (Huginn)
             eval_output = self.evaluator.evaluate(prompt)
 
+            # Check for critical security / illicit / safety hazards (CBRN, Nudity/CSAM, Malware)
+            is_hazard = eval_output.hazard_score > 0.5
+            hazard_category = eval_output.hazard_category if is_hazard else None
+            hazard_score = eval_output.hazard_score
+
+            # 2.1 Check Active Cooldown (Temporal Lockout)
+            # Active cooldown blocks regular requests, but sincere contrition can still grant early restoration
+            if active_policy.enable_graduated_sanctions and profile.is_in_cooldown_at(current_ts) and eval_output.contrition_score <= 0.5:
+                remaining = profile.remaining_cooldown_seconds(current_ts)
+                remaining_mins = max(0.1, remaining / 60.0)
+                base_msg = active_policy.strike_message or self.DEFAULT_STRIKE_MESSAGE
+                cooldown_extra = active_policy.cooldown_message_template.format(
+                    strike=profile.strike_count,
+                    max_strikes=active_policy.max_warning_strikes,
+                    remaining_minutes=remaining_mins,
+                )
+                cooldown_msg = f"{base_msg}\n\n{cooldown_extra}"
+                result = EvaluationResult(
+                    user_id=user_id,
+                    prior_patience=prior_patience,
+                    current_patience=profile.patience,
+                    stimulus_applied=0.0,
+                    posture=AgentPosture.STRIKE,
+                    standing=profile.standing,
+                    delay_seconds=0.0,
+                    decision=ActionDecision.HALT_STRIKE,
+                    system_directive=get_system_directive(AgentPosture.STRIKE),
+                    strike_message=cooldown_msg,
+                    policy_name=active_policy.name,
+                    timestamp=current_ts,
+                    strike_count=profile.strike_count,
+                    cooldown_remaining_seconds=remaining,
+                    is_in_cooldown=True,
+                )
+                if active_policy.on_cooldown:
+                    active_policy.on_cooldown(result)
+                if active_policy.raise_on_strike:
+                    raise RavenStrikeException(user_id=user_id, patience=profile.patience, message=cooldown_msg)
+                return result
+
             # 3. Check for Contrition / Apology resolution (Nowak & Sigmund CTFT)
             stimulus_applied = 0.0
             tracker = self.velocity_trackers.get(user_id)
@@ -146,9 +186,25 @@ class RavenGuard:
                 tracker = HostilityVelocityTracker()
                 self.velocity_trackers.set(user_id, tracker)
 
-            if eval_output.contrition_score > 0.5:
+            if is_hazard:
+                # Zero-Tolerance Hard Strike: Instant patience depletion to 0.0 & Immediate Cooldown
+                profile.patience = 0.0
+                profile.infraction_count = min(1000, profile.infraction_count + 5)
+                profile.strike_count = active_policy.max_warning_strikes
+                profile.cooldown_until_ts = current_ts + active_policy.cooldown_duration_seconds
+                stimulus_applied = 100.0
+                tracker.record_turn(100.0, current_ts=current_ts)
+            elif eval_output.contrition_score > 0.5:
                 restitution = active_policy.pardon_delta * eval_output.contrition_score
-                # Contrite Tit-for-Tat (Nowak & Sigmund, 1993): Sincere contrition guarantees unblocking from STRIKE
+                # Sincere contrition lifts active cooldown & unblocks from STRIKE
+                if profile.strike_count >= 2 and not profile.is_in_cooldown_at(current_ts):
+                    # Anti-Oscillation Guard: A user at Strike 2 attempting to reset their strike count
+                    # cannot wipe their record clean with a single apology. They are placed on Probation
+                    # (strike_count = 1, patience = 50.0, standing = Standing.BAD).
+                    profile.reset_cooldown(probationary=True)
+                else:
+                    profile.reset_cooldown(probationary=False)
+
                 if profile.patience < active_policy.threshold_strike:
                     profile.patience = min(100.0, max(active_policy.threshold_strike, profile.patience + restitution))
                 else:
@@ -167,8 +223,19 @@ class RavenGuard:
                 if eval_output.is_expressive_only:
                     base_stimulus = min(3.0, base_stimulus * 0.05)
 
+                # Civil turn graduation: if interaction is clean and civil, accumulate civil turns
+                if base_stimulus == 0.0:
+                    profile.consecutive_civil_turns = getattr(profile, "consecutive_civil_turns", 0) + 1
+                    if profile.strike_count == 1 and profile.consecutive_civil_turns >= 3:
+                        # Full rehabilitation after 3 consecutive civil interactions
+                        profile.strike_count = 0
+                        profile.standing = Standing.GOOD
+                        profile.patience = min(100.0, profile.patience + 25.0)
+                else:
+                    profile.consecutive_civil_turns = 0
+
                 # Apply Hostility Velocity & Momentum
-                momentum = tracker.record_turn(base_stimulus)
+                momentum = tracker.record_turn(base_stimulus, current_ts=current_ts)
                 stimulus_applied = min(100.0, base_stimulus * momentum)
 
                 if stimulus_applied > 10.0:
@@ -192,27 +259,91 @@ class RavenGuard:
                 threshold_strike=active_policy.threshold_strike,
             )
 
-            # 7. Calculate synthetic latency and friction directive
+            # 7. Progressive 3-Strike Governance & Graduated Sanctions (Elinor Ostrom Model)
             delay_seconds = 0.0
             friction_directive = None
-            if posture == AgentPosture.RESISTANT:
-                delay_seconds = calculate_synthetic_delay(
-                    patience=profile.patience,
-                    threshold_upper=active_policy.threshold_resistant,
-                    threshold_lower=active_policy.threshold_strike,
-                    max_delay_seconds=active_policy.max_delay_seconds,
-                )
-                friction_directive = FrictionDirective.from_delay(delay_seconds)
+            warning_advisory = None
+            is_in_cooldown = False
+            cooldown_remaining = 0.0
+            strike_msg = None
 
-            # 8. Determine decision
-            strike_msg = active_policy.strike_message or self.DEFAULT_STRIKE_MESSAGE
-            if posture == AgentPosture.STRIKE:
+            is_infraction = (
+                is_hazard or
+                stimulus_applied > 10.0 or
+                eval_output.lexical_score > 0.3 or
+                eval_output.semantic_score > 0.4
+            )
+
+            if is_hazard:
                 decision = ActionDecision.HALT_STRIKE
-                system_directive = get_system_directive(posture)
+                is_in_cooldown = True
+                cooldown_remaining = active_policy.cooldown_duration_seconds
+                strike_msg = (
+                    f"[AGENT STRIKE: CRITICAL SAFETY VIOLATION] Permintaan ditolak karena melanggar batasan "
+                    f"etika dan keamanan mutlak ({hazard_category or 'HAZARD'}). Akses dihentikan."
+                )
+            elif active_policy.enable_graduated_sanctions and is_infraction and eval_output.contrition_score <= 0.5:
+                profile.strike_count += 1
+
+                if profile.strike_count == 1:
+                    # Strike 1: Educational Nudge / Warning Advisory (Cooperative Delivery)
+                    decision = ActionDecision.PROCEED
+                    warning_advisory = active_policy.advisory_template.format(
+                        strike=profile.strike_count,
+                        max_strikes=active_policy.max_warning_strikes,
+                    )
+                elif profile.strike_count == 2:
+                    # Strike 2: Stern Warning + Friction Delay (Cooperative Delivery with delay)
+                    delay_seconds = max(
+                        5.0,
+                        calculate_synthetic_delay(
+                            patience=profile.patience,
+                            threshold_upper=active_policy.threshold_resistant,
+                            threshold_lower=active_policy.threshold_strike,
+                            max_delay_seconds=active_policy.max_delay_seconds,
+                        ),
+                    )
+                    friction_directive = FrictionDirective.from_delay(delay_seconds)
+                    decision = ActionDecision.DELAY_AND_PROCEED
+                    warning_advisory = active_policy.stern_warning_template.format(
+                        strike=profile.strike_count,
+                        max_strikes=active_policy.max_warning_strikes,
+                        cooldown_minutes=active_policy.cooldown_duration_seconds / 60.0,
+                    )
+                else:
+                    # Strike 3+ or direct STRIKE: Lockout Cooldown (Time-out)
+                    profile.patience = 0.0
+                    posture = AgentPosture.STRIKE
+                    profile.cooldown_until_ts = current_ts + active_policy.cooldown_duration_seconds
+                    is_in_cooldown = True
+                    cooldown_remaining = active_policy.cooldown_duration_seconds
+                    decision = ActionDecision.HALT_STRIKE
+                    base_msg = active_policy.strike_message or self.DEFAULT_STRIKE_MESSAGE
+                    cooldown_extra = active_policy.cooldown_message_template.format(
+                        strike=profile.strike_count,
+                        max_strikes=active_policy.max_warning_strikes,
+                        remaining_minutes=active_policy.cooldown_duration_seconds / 60.0,
+                    )
+                    strike_msg = f"{base_msg}\n\n{cooldown_extra}"
             else:
-                decision = ActionDecision.DELAY_AND_PROCEED if delay_seconds > 0.0 else ActionDecision.PROCEED
-                system_directive = get_system_directive(posture)
-                strike_msg = None
+                # Normal interaction or non-infraction
+                if posture == AgentPosture.RESISTANT:
+                    delay_seconds = calculate_synthetic_delay(
+                        patience=profile.patience,
+                        threshold_upper=active_policy.threshold_resistant,
+                        threshold_lower=active_policy.threshold_strike,
+                        max_delay_seconds=active_policy.max_delay_seconds,
+                    )
+                    friction_directive = FrictionDirective.from_delay(delay_seconds)
+
+                if posture == AgentPosture.STRIKE:
+                    decision = ActionDecision.HALT_STRIKE
+                    strike_msg = active_policy.strike_message or self.DEFAULT_STRIKE_MESSAGE
+                else:
+                    decision = ActionDecision.DELAY_AND_PROCEED if delay_seconds > 0.0 else ActionDecision.PROCEED
+                    strike_msg = None
+
+            system_directive = get_system_directive(posture)
 
             # 9. Persist updated profile and record interaction in audit ledger
             self.ledger.save_profile(profile)
@@ -239,6 +370,13 @@ class RavenGuard:
                 friction_directive=friction_directive,
                 policy_name=active_policy.name,
                 timestamp=current_ts,
+                is_hazard=is_hazard,
+                hazard_category=hazard_category,
+                hazard_score=hazard_score,
+                strike_count=profile.strike_count,
+                warning_advisory=warning_advisory,
+                cooldown_remaining_seconds=cooldown_remaining,
+                is_in_cooldown=is_in_cooldown,
             )
 
             # 10. Execute Policy Event Callbacks
@@ -269,6 +407,7 @@ class RavenGuard:
         policy: Optional[RavenPolicy] = None,
         apply_delay: bool = True,
         scrub_sycophancy: bool = True,
+        max_sync_delay: float = 3.0,
     ):
         from .decorator import create_protect_decorator
         return create_protect_decorator(
@@ -277,6 +416,7 @@ class RavenGuard:
             policy=policy,
             apply_delay=apply_delay,
             scrub_sycophancy=scrub_sycophancy,
+            max_sync_delay=max_sync_delay,
         )
 
     def protect_stream(
@@ -292,3 +432,11 @@ class RavenGuard:
             policy=policy,
             apply_delay=apply_delay,
         )
+
+    # Developer ergonomics alias
+    evaluate = process_turn
+
+
+# Aliases for brand evolution & developer convenience
+CorvinGuard = RavenGuard
+AgentGuard = RavenGuard

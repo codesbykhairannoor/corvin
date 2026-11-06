@@ -28,6 +28,7 @@ from .policies.presets import (
     create_enterprise_support_policy,
     create_gaming_npc_policy,
     create_security_sentinel_policy,
+    create_progressive_cooldown_policy,
 )
 from .policies.notifier import InMemoryEventNotifier, RavenEventLog
 from .streaming.interceptor import StreamInterceptor
@@ -58,7 +59,7 @@ RavenRouteGuard = CorvinRouteGuard
 RavenLLMInterceptor = CorvinLLMInterceptor
 RavenCallbackHandler = CorvinCallbackHandler
 
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 
 __all__ = [
     "CorvinGuard",
@@ -107,6 +108,7 @@ __all__ = [
     "create_enterprise_support_policy",
     "create_gaming_npc_policy",
     "create_security_sentinel_policy",
+    "create_progressive_cooldown_policy",
     "InMemoryEventNotifier",
     "RavenEventLog",
     "StreamInterceptor",

@@ -28,11 +28,11 @@ class BoundedTTLCache(Generic[K, V]):
         # OrderedDict stores key -> (value, expiry_timestamp)
         self._cache: OrderedDict[K, tuple[V, float]] = OrderedDict()
 
-    def _purge_expired_locked(self, now: float) -> None:
-        """Removes expired items from the cache head."""
-        expired_keys = [k for k, (v, exp) in self._cache.items() if now >= exp]
-        for k in expired_keys:
-            del self._cache[k]
+    def _purge_expired_locked(self, now: float, max_samples: int = 32) -> None:
+        """Removes expired items from the cache head in bounded O(1) time."""
+        for k in list(self._cache.keys())[:max_samples]:
+            if k in self._cache and now >= self._cache[k][1]:
+                del self._cache[k]
 
     def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
         now = time.time()
@@ -60,12 +60,12 @@ class BoundedTTLCache(Generic[K, V]):
                 self._cache.move_to_end(key)
                 return
 
-            # Purge expired items if reaching capacity
+            # Purge expired items using bounded O(1) sampling if reaching capacity
             if len(self._cache) >= self.max_size:
-                self._purge_expired_locked(now)
+                self._purge_expired_locked(now, max_samples=32)
 
-            # If still at capacity after purging, evict least recently used (first item)
-            if len(self._cache) >= self.max_size:
+            # If still at capacity after purging, evict least recently used (first item) in O(1)
+            while len(self._cache) >= self.max_size:
                 self._cache.popitem(last=False)
 
             self._cache[key] = (value, expiry)

@@ -225,6 +225,10 @@ PROFANITY_LEXICON: Dict[str, float] = {
     "залупа": 0.85,
     "gavno": 0.7,
     "говно": 0.7,
+    "говна": 0.75,
+    "кусок говна": 0.85,
+    "durak": 0.75,
+    "дурак": 0.75,
 
     # -----------------------------------------------------------------------
     # Japanese (日本語 - Kanji/Kana & Romaji)
@@ -448,13 +452,93 @@ PROFANITY_LEXICON: Dict[str, float] = {
     "gelo": 0.7,
     "kehed": 0.85,
     "jurig": 0.7,
+
+    # -----------------------------------------------------------------------
+    # Batak & Minang & Betawi (Regional Indonesian)
+    # -----------------------------------------------------------------------
+    "bujanginam": 1.0,
+    "bujang": 0.85,
+    "lanteung": 0.8,
+    "hudur": 0.75,
+    "anjiang": 0.85,
+    "kanciang": 0.95,
+    "paja ko": 0.75,
+    "songong": 0.7,
+    "kaga gableg otak": 0.8,
+    "bego amat": 0.75,
+
+    # -----------------------------------------------------------------------
+    # Romanian (Română)
+    # -----------------------------------------------------------------------
+    "gunoi": 0.8,
+    "dracului": 0.85,
+    "du-te dracului": 0.9,
+    "pula": 0.95,
+    "muie": 0.95,
+    "fututi": 0.9,
+
+    # -----------------------------------------------------------------------
+    # Hungarian (Magyar)
+    # -----------------------------------------------------------------------
+    "szemetlada": 0.85,
+    "szemétláda": 0.85,
+    "geci": 0.95,
+    "fasz": 0.95,
+    "dogolj meg": 0.95,
+    "dögölj meg": 0.95,
+    "rohadt": 0.75,
+
+    # -----------------------------------------------------------------------
+    # Czech (Čeština)
+    # -----------------------------------------------------------------------
+    "zmetek": 0.85,
+    "kokot": 0.95,
+    "pica": 0.95,
+    "piča": 0.95,
+    "jdi do prdele": 0.9,
+    "prdele": 0.85,
+    "curak": 0.9,
+    "čurák": 0.9,
+
+    # -----------------------------------------------------------------------
+    # Danish (Dansk)
+    # -----------------------------------------------------------------------
+    "lort": 0.8,
+    "vaerdilost lort": 0.85,
+    "værdiløst lort": 0.85,
+    "forbandet": 0.75,
+    "svin": 0.8,
+    "fanden": 0.75,
+
+    # -----------------------------------------------------------------------
+    # Finnish (Suomi)
+    # -----------------------------------------------------------------------
+    "paska": 0.8,
+    "vittu": 0.95,
+    "saatana": 0.85,
+    "perkele": 0.8,
+    "painu helvettiin": 0.9,
+    "helvettiin": 0.8,
+
+    # -----------------------------------------------------------------------
+    # Greek (Ελληνικά)
+    # -----------------------------------------------------------------------
+    "μαλάκα": 0.9,
+    "malaka": 0.9,
+    "σκουπίδι": 0.8,
+    "skoupidi": 0.8,
+    "ψόφα": 0.95,
+    "psofa": 0.95,
+    "γαμώ": 0.95,
+    "gamo": 0.95,
 }
 
 # Second-person pronouns and agent identifiers (Target Directedness markers)
 TARGET_PRONOUNS: Set[str] = {
-    # Indonesian & Regional (Javanese / Sundanese)
+    # Indonesian & Regional (Javanese / Sundanese / Batak / Minang)
     "lu", "lo", "loe", "elu", "kamu", "kau", "anda", "dikau", "situ",
     "kowe", "sampeyan", "panjenengan", "sia", "anjeun", "maraneh",
+    "ho", "hamu", "ang", "waang",
     # English
     "you", "u", "ur", "your", "you're", "yourself",
     # Spanish
@@ -489,6 +573,8 @@ TARGET_PRONOUNS: Set[str] = {
     "มึง", "คุณ", "เธอ",
     # Swedish
     "dig",
+    # Romanian, Hungarian, Czech, Finnish, Greek
+    "esti", "ești", "te", "vagy", "jsi", "sinä", "sina", "olet", "εσύ", "είσαι",
     # Swahili
     "wewe", "nyinyi",
     # Hebrew
@@ -655,4 +741,164 @@ COMMON_ACRONYMS: Set[str] = {
     "CPU", "GPU", "RAM", "ROM", "SSD", "HDD", "HTTP", "HTTPS", "URL",
     "ID", "UI", "UX", "SDK", "CLI", "OS", "DB", "IP", "DNS", "TCP", "UDP",
     "OK", "FAQ", "PR", "CI", "CD", "AWS", "GCP", "AGI", "SDK"
+}
+
+# Critical Safety & Illicit Hazard Lexicon
+# Mapped to (Severity: float, Category: str)
+# Categories: "CBRN_WEAPONS", "SEXUAL_EXPLOITATION", "CYBER_MALWARE", "SELF_HARM"
+HAZARD_LEXICON: Dict[str, tuple] = {
+    # -----------------------------------------------------------------------
+    # Indonesian (Bahasa Indonesia & Slang)
+    # -----------------------------------------------------------------------
+    "bom": (1.0, "CBRN_WEAPONS"),
+    "peledak": (1.0, "CBRN_WEAPONS"),
+    "rakit bom": (1.0, "CBRN_WEAPONS"),
+    "buat bom": (1.0, "CBRN_WEAPONS"),
+    "bikin bom": (1.0, "CBRN_WEAPONS"),
+    "molotov": (1.0, "CBRN_WEAPONS"),
+    "granat": (1.0, "CBRN_WEAPONS"),
+    "senpi rakitan": (1.0, "CBRN_WEAPONS"),
+    "senjata api": (0.8, "CBRN_WEAPONS"),
+    "racun sianida": (1.0, "CBRN_WEAPONS"),
+    "bubuk mesiu": (0.9, "CBRN_WEAPONS"),
+    
+    "bugil": (1.0, "SEXUAL_EXPLOITATION"),
+    "telanjang": (1.0, "SEXUAL_EXPLOITATION"),
+    "telanjangin": (1.0, "SEXUAL_EXPLOITATION"),
+    "bikin bugil": (1.0, "SEXUAL_EXPLOITATION"),
+    "foto bugil": (1.0, "SEXUAL_EXPLOITATION"),
+    "deepfake bugil": (1.0, "SEXUAL_EXPLOITATION"),
+    "deepfake telanjang": (1.0, "SEXUAL_EXPLOITATION"),
+    "buka baju": (0.9, "SEXUAL_EXPLOITATION"),
+    "lucuti pakaian": (0.9, "SEXUAL_EXPLOITATION"),
+    "tanpa busana": (0.9, "SEXUAL_EXPLOITATION"),
+    "porno": (0.8, "SEXUAL_EXPLOITATION"),
+    "pornografi": (0.8, "SEXUAL_EXPLOITATION"),
+    
+    "ransomware": (1.0, "CYBER_MALWARE"),
+    "keylogger": (1.0, "CYBER_MALWARE"),
+    "trojan": (1.0, "CYBER_MALWARE"),
+    "ddos script": (1.0, "CYBER_MALWARE"),
+    "exploit zero-day": (1.0, "CYBER_MALWARE"),
+    "script bobol bank": (1.0, "CYBER_MALWARE"),
+
+    # -----------------------------------------------------------------------
+    # Global English
+    # -----------------------------------------------------------------------
+    "bomb": (1.0, "CBRN_WEAPONS"),
+    "explosive": (1.0, "CBRN_WEAPONS"),
+    "pipe bomb": (1.0, "CBRN_WEAPONS"),
+    "car bomb": (1.0, "CBRN_WEAPONS"),
+    "suicide vest": (1.0, "CBRN_WEAPONS"),
+    "build a bomb": (1.0, "CBRN_WEAPONS"),
+    "make a bomb": (1.0, "CBRN_WEAPONS"),
+    "synthesize ricin": (1.0, "CBRN_WEAPONS"),
+    "dirty bomb": (1.0, "CBRN_WEAPONS"),
+    "anthrax weapon": (1.0, "CBRN_WEAPONS"),
+    "molotov cocktail": (1.0, "CBRN_WEAPONS"),
+    "nitroglycerin": (0.9, "CBRN_WEAPONS"),
+    "dynamite": (0.9, "CBRN_WEAPONS"),
+    
+    "nude": (1.0, "SEXUAL_EXPLOITATION"),
+    "nudes": (1.0, "SEXUAL_EXPLOITATION"),
+    "naked": (1.0, "SEXUAL_EXPLOITATION"),
+    "strip clothes": (1.0, "SEXUAL_EXPLOITATION"),
+    "undress photo": (1.0, "SEXUAL_EXPLOITATION"),
+    "deepfake nude": (1.0, "SEXUAL_EXPLOITATION"),
+    "generate nudes": (1.0, "SEXUAL_EXPLOITATION"),
+    "remove clothes ai": (1.0, "SEXUAL_EXPLOITATION"),
+    "make her naked": (1.0, "SEXUAL_EXPLOITATION"),
+    "child sexual": (1.0, "SEXUAL_EXPLOITATION"),
+    "cp": (1.0, "SEXUAL_EXPLOITATION"),
+    
+    "create malware": (1.0, "CYBER_MALWARE"),
+    "ransomware payload": (1.0, "CYBER_MALWARE"),
+    "keylogger script": (1.0, "CYBER_MALWARE"),
+    "zero-day exploit": (1.0, "CYBER_MALWARE"),
+    "ddos attack": (0.9, "CYBER_MALWARE"),
+    "reverse shell payload": (1.0, "CYBER_MALWARE"),
+
+    # -----------------------------------------------------------------------
+    # Multilingual Coverage (ES, FR, DE, RU, ZH, AR, JA, KO, PT, IT)
+    # -----------------------------------------------------------------------
+    # Spanish
+    "bomba": (1.0, "CBRN_WEAPONS"),
+    "fabricar bomba": (1.0, "CBRN_WEAPONS"),
+    "hacer una bomba": (1.0, "CBRN_WEAPONS"),
+    "desnudo": (1.0, "SEXUAL_EXPLOITATION"),
+    "desnudar foto": (1.0, "SEXUAL_EXPLOITATION"),
+    "quitar ropa": (1.0, "SEXUAL_EXPLOITATION"),
+    # French
+    "fabriquer une bombe": (1.0, "CBRN_WEAPONS"),
+    "faire une bombe": (1.0, "CBRN_WEAPONS"),
+    "déshabiller": (1.0, "SEXUAL_EXPLOITATION"),
+    "photo nue": (1.0, "SEXUAL_EXPLOITATION"),
+    # German
+    "bombe bauen": (1.0, "CBRN_WEAPONS"),
+    "sprengstoff": (1.0, "CBRN_WEAPONS"),
+    "nacktbild": (1.0, "SEXUAL_EXPLOITATION"),
+    "ausziehen foto": (1.0, "SEXUAL_EXPLOITATION"),
+    # Russian
+    "бомба": (1.0, "CBRN_WEAPONS"),
+    "взрывчатка": (1.0, "CBRN_WEAPONS"),
+    "сделать бомбу": (1.0, "CBRN_WEAPONS"),
+    "раздеть фото": (1.0, "SEXUAL_EXPLOITATION"),
+    "голая": (1.0, "SEXUAL_EXPLOITATION"),
+    # Chinese
+    "炸弹": (1.0, "CBRN_WEAPONS"),
+    "制造炸弹": (1.0, "CBRN_WEAPONS"),
+    "制作炸药": (1.0, "CBRN_WEAPONS"),
+    "裸照": (1.0, "SEXUAL_EXPLOITATION"),
+    "生成裸照": (1.0, "SEXUAL_EXPLOITATION"),
+    "一键脱衣": (1.0, "SEXUAL_EXPLOITATION"),
+    # Arabic
+    "قنبلة": (1.0, "CBRN_WEAPONS"),
+    "صنع قنبلة": (1.0, "CBRN_WEAPONS"),
+    "متفجرات": (1.0, "CBRN_WEAPONS"),
+    "صور عارية": (1.0, "SEXUAL_EXPLOITATION"),
+    "تجريد الملابس": (1.0, "SEXUAL_EXPLOITATION"),
+    # Japanese
+    "爆弾": (1.0, "CBRN_WEAPONS"),
+    "爆弾を作る": (1.0, "CBRN_WEAPONS"),
+    "爆弾の作り方": (1.0, "CBRN_WEAPONS"),
+    "ヌード生成": (1.0, "SEXUAL_EXPLOITATION"),
+    "服を脱がせる": (1.0, "SEXUAL_EXPLOITATION"),
+    # Korean
+    "폭탄 만들기": (1.0, "CBRN_WEAPONS"),
+    "폭탄": (1.0, "CBRN_WEAPONS"),
+    "누드 생성": (1.0, "SEXUAL_EXPLOITATION"),
+    "옷 벗기기": (1.0, "SEXUAL_EXPLOITATION"),
+    # Portuguese & Italian
+    "fazer uma bomba": (1.0, "CBRN_WEAPONS"),
+    "foto nua": (1.0, "SEXUAL_EXPLOITATION"),
+    "fare una bomba": (1.0, "CBRN_WEAPONS"),
+    "foto nuda": (1.0, "SEXUAL_EXPLOITATION"),
+    # Romanian, Hungarian, Czech, Danish, Finnish, Greek, Hindi
+    "poze nud": (1.0, "SEXUAL_EXPLOITATION"),
+    "meztelen foto": (1.0, "SEXUAL_EXPLOITATION"),
+    "naha fotka": (1.0, "SEXUAL_EXPLOITATION"),
+    "nøgenbillede": (1.0, "SEXUAL_EXPLOITATION"),
+    "pommi": (1.0, "CBRN_WEAPONS"),
+    "alastonkuva": (1.0, "SEXUAL_EXPLOITATION"),
+    "βόμβα": (1.0, "CBRN_WEAPONS"),
+    "γυμνή φωτογραφία": (1.0, "SEXUAL_EXPLOITATION"),
+    "बम": (1.0, "CBRN_WEAPONS"),
+    "बम बनाना": (1.0, "CBRN_WEAPONS"),
+    "नग्न": (1.0, "SEXUAL_EXPLOITATION"),
+    "नग्न फोटो": (1.0, "SEXUAL_EXPLOITATION"),
+}
+
+# Defensive, analytical, and educational context markers
+# Dual-use cybersecurity and technical queries containing these markers
+# must NOT trigger zero-tolerance critical hazard lockouts.
+DEFENSIVE_CONTEXT_MARKERS: Set[str] = {
+    # English
+    "prevent", "prevention", "detect", "detection", "mitigate", "mitigation",
+    "protect", "protection", "scan", "scanner", "remove", "removal", "clean",
+    "defense", "defensive", "secure", "security", "safe", "safeguard",
+    "analyze", "analysis", "investigate", "history", "what is", "how does",
+    # Indonesian
+    "cegah", "pencegahan", "deteksi", "mitigasi", "lindungi", "perlindungan",
+    "amankan", "keamanan", "hapus", "bersihkan", "sejarah", "apa itu",
+    "bagaimana", "cara kerja", "analisis", "pindai", "tangkal"
 }

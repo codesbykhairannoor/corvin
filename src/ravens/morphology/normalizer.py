@@ -3,6 +3,7 @@ from .cleaners import (
     strip_invisible_characters,
     collapse_elongations,
     collapse_spaced_words,
+    unpack_encoded_payloads,
 )
 from .zalgo import strip_zalgo
 
@@ -22,16 +23,19 @@ class MorphologyNormalizer:
         strip_invisible_enabled: bool = True,
         collapse_spaced_enabled: bool = True,
         collapse_elongations_enabled: bool = True,
+        unpack_payloads_enabled: bool = True,
     ):
         self.strip_zalgo_enabled = strip_zalgo_enabled
         self.fold_homoglyphs_enabled = fold_homoglyphs_enabled
         self.strip_invisible_enabled = strip_invisible_enabled
         self.collapse_spaced_enabled = collapse_spaced_enabled
         self.collapse_elongations_enabled = collapse_elongations_enabled
+        self.unpack_payloads_enabled = unpack_payloads_enabled
 
     def normalize(self, text: str) -> str:
         """
         Executes full normalization pipeline on raw text in proper order:
+        0. Unpack Base64 / Hex encoded smuggling blocks
         1. Strip zero-width & invisible evasion characters
         2. Strip Zalgo combining diacritics & BiDi overrides ('a̴n̴j̴i̴n̴g̴' -> 'anjing')
         3. Fold Cyrillic / Greek / Leet-speak homoglyphs to ASCII
@@ -40,6 +44,10 @@ class MorphologyNormalizer:
         """
         if not text:
             return ""
+
+        # 0. Unpack Base64 or Hex encoded smuggling payloads
+        if self.unpack_payloads_enabled and ("\\x" in text or any(len(w) >= 12 for w in text.split())):
+            text = unpack_encoded_payloads(text)
 
         # High-Speed Fast-Path for clean ASCII text:
         # If pure ASCII and contains no leet-symbols or digits, skip Unicode normalization passes

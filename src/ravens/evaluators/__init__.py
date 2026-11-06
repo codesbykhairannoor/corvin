@@ -9,6 +9,8 @@ from corvin.evaluators import (
     POSITIVE_MODIFIERS,
     CONTRITION_MARKERS,
     COMMON_ACRONYMS,
+    HAZARD_LEXICON,
+    DEFENSIVE_CONTEXT_MARKERS,
 )
 
 __all__ = [
@@ -22,6 +24,8 @@ __all__ = [
     "POSITIVE_MODIFIERS",
     "CONTRITION_MARKERS",
     "COMMON_ACRONYMS",
+    "HAZARD_LEXICON",
+    "DEFENSIVE_CONTEXT_MARKERS",
 ]
 
 

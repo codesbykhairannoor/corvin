@@ -3,8 +3,10 @@ FastAPI & Starlette Middleware and Route Guard for Corvin Sovereign AI Defense.
 """
 
 import asyncio
+import hashlib
 import json
 import math
+import secrets
 from typing import Optional, List, Callable, Dict, Any, Union
 
 try:
@@ -102,26 +104,35 @@ class CorvinFastAPIMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         return any(path == mp or path.startswith(mp.rstrip("/") + "/") for mp in self.monitored_paths)
 
-    def _get_user_id(self, request: Request) -> str:
+    def _get_user_id(self, request: Request) -> tuple[str, Optional[str]]:
         if self.extract_user_id:
             uid = self.extract_user_id(request)
             if uid:
-                return str(uid)
+                return str(uid), None
 
         header_val = request.headers.get(self.user_id_header)
         if header_val:
-            return header_val.strip()
+            return header_val.strip(), None
 
-        # Fallback to authorization bearer token or client IP
+        # Fallback to authorization bearer token
         auth = request.headers.get("Authorization")
         if auth and auth.startswith("Bearer "):
-            return auth.split("Bearer ", 1)[1].strip()[:32]
+            return auth.split("Bearer ", 1)[1].strip()[:32], None
 
-        client = getattr(request, "client", None)
-        if client and hasattr(client, "host"):
-            return client.host
+        # Check for explicit session header or cookie to isolate clients behind NAT/CGNAT
+        session_id = request.headers.get("X-Corvin-Session") or request.cookies.get("corvin_session_id")
+        new_session = None
+        if not session_id:
+            new_session = secrets.token_hex(16)
+            session_id = new_session
 
-        return "anonymous_user"
+        user_id = f"sess_{session_id}"
+
+        # If identity signer is active on guard, sign the generated anonymous session token
+        if getattr(self.guard, "identity_signer", None) is not None:
+            user_id = self.guard.identity_signer.sign_id(user_id)
+
+        return user_id, new_session
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not self._should_monitor(request):
@@ -150,7 +161,7 @@ class CorvinFastAPIMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # 3. Extract User Identity
-        user_id = self._get_user_id(request)
+        user_id, new_session = self._get_user_id(request)
 
         # 4. Process interaction through CorvinGuard
         result = self.guard.process_turn(user_id=user_id, prompt=prompt_text)
@@ -162,15 +173,21 @@ class CorvinFastAPIMiddleware(BaseHTTPMiddleware):
             pass
 
         # 5. Zero-Compute Early Strike Abort
-        if result.posture == AgentPosture.STRIKE and self.block_on_strike:
+        should_abort = (
+            result.decision in (ActionDecision.HALT_STRIKE, ActionDecision.COOLDOWN_LOCKOUT) or
+            (result.posture == AgentPosture.STRIKE and not result.warning_advisory)
+        )
+        if should_abort and self.block_on_strike:
             headers: Dict[str, str] = {}
             if self.inject_headers:
                 headers["X-Corvin-Posture"] = result.posture.value
                 headers["X-Corvin-Patience"] = f"{result.current_patience:.1f}"
                 headers["X-Corvin-Standing"] = result.standing.value
                 headers["Retry-After"] = "3600"
+                if new_session:
+                    headers["X-Corvin-Session"] = new_session
 
-            return JSONResponse(
+            resp = JSONResponse(
                 status_code=self.strike_status_code,
                 content={
                     "error": "agent_strike",
@@ -181,6 +198,9 @@ class CorvinFastAPIMiddleware(BaseHTTPMiddleware):
                 },
                 headers=headers,
             )
+            if new_session and hasattr(resp, "set_cookie"):
+                resp.set_cookie("corvin_session_id", new_session, httponly=True, samesite="lax")
+            return resp
 
         # 6. Apply Synthetic Friction Delay if Resistant
         if result.delay_seconds > 0.0 and self.apply_delay:
@@ -190,14 +210,23 @@ class CorvinFastAPIMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # 8. Inject Corvin telemetry headers into the HTTP response
-        if self.inject_headers:
+        if self.inject_headers and hasattr(response, "headers"):
             response.headers["X-Corvin-Posture"] = result.posture.value
             response.headers["X-Corvin-Patience"] = f"{result.current_patience:.1f}"
             response.headers["X-Corvin-Standing"] = result.standing.value
+            if result.warning_advisory:
+                response.headers["X-Corvin-Advisory"] = result.warning_advisory
+            if result.strike_count > 0:
+                response.headers["X-Corvin-Strike-Count"] = str(result.strike_count)
             if result.system_directive:
                 response.headers["X-Corvin-Directive"] = result.system_directive
             if result.delay_seconds > 0.0:
                 response.headers["Retry-After"] = str(int(math.ceil(result.delay_seconds)))
+
+        if new_session and hasattr(response, "set_cookie"):
+            response.set_cookie("corvin_session_id", new_session, httponly=True, samesite="lax")
+        if new_session and hasattr(response, "headers"):
+            response.headers["X-Corvin-Session"] = new_session
 
         return response
 
@@ -260,7 +289,12 @@ class CorvinRouteGuard:
         if self.extract_user_id:
             user_id = self.extract_user_id(request)
         else:
-            user_id = request.headers.get("X-User-ID") or "anonymous_user"
+            user_id = (
+                request.headers.get("X-User-ID")
+                or request.headers.get("X-Corvin-Session")
+                or request.cookies.get("corvin_session_id")
+                or "anonymous_user"
+            )
 
         result = self.guard.process_turn(user_id=user_id, prompt=prompt_text)
 

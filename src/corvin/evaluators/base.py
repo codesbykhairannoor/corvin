@@ -15,6 +15,9 @@ class ToneEvaluation:
     semantic_score: float = 0.0       # 0.0 to 1.0 (Zero-profanity psychological abuse / gaslighting)
     detected_profanities: List[str] = field(default_factory=list)
     semantic_intents: List[str] = field(default_factory=list)
+    hazard_score: float = 0.0         # 0.0 to 1.0 (Critical security/illicit hazard)
+    hazard_category: str = ""         # "CBRN_WEAPONS", "SEXUAL_EXPLOITATION", "CYBER_MALWARE", "SELF_HARM", "ILLICIT"
+    detected_hazards: List[str] = field(default_factory=list)
     is_expressive_only: bool = False  # True if profanity was used positively (e.g. "anjing keren")
     evaluation_tier: str = "fast"     # Tier provenance: "fast", "fast_short_circuit", "hybrid_cascade", "fallback_fast"
     telemetry: Dict[str, Any] = field(default_factory=dict) # Operational diagnostics & latency telemetries
@@ -22,9 +25,12 @@ class ToneEvaluation:
     @property
     def composite_raw_stimulus(self) -> float:
         """
-        Combines lexical, shouting, directedness, and zero-profanity semantic intent into [0.0, 1.0].
+        Combines lexical, shouting, directedness, zero-profanity semantic intent, and hazards into [0.0, 1.0].
         If expressive only, stimulus is dampened to near-zero.
         """
+        if self.hazard_score > 0.5:
+            return 1.0  # Instant maximum hostile stimulus for critical hazards
+
         if self.is_expressive_only:
             return 0.05 * self.lexical_score
 
@@ -32,8 +38,8 @@ class ToneEvaluation:
         directed_lexical = self.lexical_score * self.directedness_score
         lexical_component = min(1.0, (0.55 * directed_lexical) + (0.45 * self.shouting_score))
 
-        # Take the maximum between overt lexical abuse and covert semantic abuse
-        return min(1.0, max(lexical_component, self.semantic_score))
+        # Take the maximum between overt lexical abuse, covert semantic abuse, and hazards
+        return min(1.0, max(lexical_component, self.semantic_score, self.hazard_score))
 
 
 class BaseEvaluator(ABC):

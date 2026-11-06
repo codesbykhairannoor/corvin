@@ -15,6 +15,7 @@ def create_protect_decorator(
     policy: Optional[RavenPolicy] = None,
     apply_delay: bool = True,
     scrub_sycophancy: bool = True,
+    max_sync_delay: float = 3.0,
 ):
     """
     Factory creating a decorator that wraps sync or async agent functions with an active policy
@@ -32,6 +33,8 @@ def create_protect_decorator(
                 break
 
         def _extract_call_args(args, kwargs):
+            current_ts = kwargs.pop("current_ts", None)
+            resolved_policy = kwargs.pop("policy", None) or policy
             bound = sig.bind_partial(*args, **kwargs)
             bound_args = bound.arguments
 
@@ -59,19 +62,19 @@ def create_protect_decorator(
                         resolved_prompt = arg
                         break
 
-            resolved_policy = kwargs.pop("policy", None) or policy
-            return resolved_uid, resolved_prompt, resolved_policy
+            return resolved_uid, resolved_prompt, resolved_policy, current_ts
 
         if is_async:
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
-                resolved_uid, resolved_prompt, call_policy = _extract_call_args(args, kwargs)
+                resolved_uid, resolved_prompt, call_policy, call_ts = _extract_call_args(args, kwargs)
                 # Run synchronous ledger and evaluator I/O in thread pool to prevent blocking event loop
                 eval_result = await asyncio.to_thread(
-                    guard.process_turn, resolved_uid, resolved_prompt, policy=call_policy
+                    guard.process_turn, resolved_uid, resolved_prompt, policy=call_policy, current_ts=call_ts
                 )
+                async_wrapper.last_evaluation = eval_result
 
-                if eval_result.decision == ActionDecision.HALT_STRIKE:
+                if eval_result.decision in (ActionDecision.HALT_STRIKE, ActionDecision.COOLDOWN_LOCKOUT):
                     return eval_result.strike_message
 
                 if apply_delay and eval_result.delay_seconds > 0.0:
@@ -85,22 +88,30 @@ def create_protect_decorator(
                 # Bidirectional Output Scrubbing: Strip sycophancy if in STOIC or RESISTANT posture
                 if scrub_sycophancy and isinstance(raw_output, str):
                     if eval_result.posture in (AgentPosture.STOIC_COLD, AgentPosture.RESISTANT):
-                        return SycophancyStripper.scrub_text(raw_output)
+                        raw_output = SycophancyStripper.scrub_text(raw_output)
+
+                # Cooperative Delivery: Append warning advisory notice if present
+                if eval_result.warning_advisory and isinstance(raw_output, str):
+                    raw_output = f"{raw_output}\n\n{eval_result.warning_advisory}"
 
                 return raw_output
 
+            async_wrapper.last_evaluation = None
             return async_wrapper
         else:
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
-                resolved_uid, resolved_prompt, call_policy = _extract_call_args(args, kwargs)
-                eval_result = guard.process_turn(resolved_uid, resolved_prompt, policy=call_policy)
+                resolved_uid, resolved_prompt, call_policy, call_ts = _extract_call_args(args, kwargs)
+                eval_result = guard.process_turn(resolved_uid, resolved_prompt, policy=call_policy, current_ts=call_ts)
+                sync_wrapper.last_evaluation = eval_result
 
-                if eval_result.decision == ActionDecision.HALT_STRIKE:
+                if eval_result.decision in (ActionDecision.HALT_STRIKE, ActionDecision.COOLDOWN_LOCKOUT):
                     return eval_result.strike_message
 
                 if apply_delay and eval_result.delay_seconds > 0.0:
-                    time.sleep(eval_result.delay_seconds)
+                    # Cap synchronous sleep to prevent worker thread starvation DoS
+                    safe_delay = min(max_sync_delay, eval_result.delay_seconds)
+                    time.sleep(safe_delay)
 
                 if directive_arg_name and directive_arg_name not in kwargs:
                     kwargs[directive_arg_name] = eval_result.system_directive
@@ -110,10 +121,15 @@ def create_protect_decorator(
                 # Bidirectional Output Scrubbing: Strip sycophancy if in STOIC or RESISTANT posture
                 if scrub_sycophancy and isinstance(raw_output, str):
                     if eval_result.posture in (AgentPosture.STOIC_COLD, AgentPosture.RESISTANT):
-                        return SycophancyStripper.scrub_text(raw_output)
+                        raw_output = SycophancyStripper.scrub_text(raw_output)
+
+                # Cooperative Delivery: Append warning advisory notice if present
+                if eval_result.warning_advisory and isinstance(raw_output, str):
+                    raw_output = f"{raw_output}\n\n{eval_result.warning_advisory}"
 
                 return raw_output
 
+            sync_wrapper.last_evaluation = None
             return sync_wrapper
 
     return decorator

@@ -105,3 +105,31 @@ def create_security_sentinel_policy() -> RavenPolicy:
         custom_metadata={"audit_alert": "HIGH_PRIORITY_BREACH"},
     )
 
+
+def create_progressive_cooldown_policy(
+    name: str = "progressive_cooldown",
+    max_warning_strikes: int = 3,
+    cooldown_duration_seconds: float = 3600.0,
+    cooperative_delivery: bool = True,
+    on_strike: Optional[Callable[[EvaluationResult], None]] = None,
+    on_cooldown: Optional[Callable[[EvaluationResult], None]] = None,
+) -> RavenPolicy:
+    """
+    Progressive Cooldown & Graduated Sanctions Policy (Elinor Ostrom Model):
+    - Strike 1: Cooperative payload delivery + Educational Nudge Advisory.
+    - Strike 2: Cooperative payload delivery + Synthetic Friction (5s+) + Stern Warning.
+    - Strike 3+: Temporal Cooldown Lockout (Time-out ban) with no chat processed.
+    - Natural Restitution: Slate is automatically wiped clean when cooldown expires (0 apology required).
+    """
+    return RavenPolicy(
+        name=name,
+        enable_graduated_sanctions=True,
+        max_warning_strikes=max_warning_strikes,
+        cooldown_duration_seconds=cooldown_duration_seconds,
+        cooperative_delivery=cooperative_delivery,
+        on_strike=on_strike,
+        on_cooldown=on_cooldown,
+        custom_metadata={"framework": "ostrom_graduated_sanctions", "reactance_mitigation": True},
+    )
+
+

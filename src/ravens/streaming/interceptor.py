@@ -30,6 +30,7 @@ class StreamInterceptor:
         eval_result: EvaluationResult,
         apply_delay: bool = True,
         scrub_sycophancy: bool = True,
+        max_sync_delay: float = 3.0,
     ) -> Generator[Any, None, None]:
         """
         Intercepts a synchronous generator stream.
@@ -40,7 +41,8 @@ class StreamInterceptor:
             return
 
         if apply_delay and eval_result.delay_seconds > 0.0:
-            time.sleep(eval_result.delay_seconds)
+            safe_delay = min(max_sync_delay, eval_result.delay_seconds)
+            time.sleep(safe_delay)
 
         gen = stream_factory()
 
